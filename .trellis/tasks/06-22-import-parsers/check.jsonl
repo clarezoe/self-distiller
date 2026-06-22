@@ -1,0 +1,4 @@
+{"file": "docs/self_distiller_prd_en.md", "reason": "Verify §11.5 material shape, §15.2 (only user's lines = their style), source_type=chat tagging"}
+{"file": ".trellis/tasks/06-22-self-distiller-mvp/prd.md", "reason": "Verify invariants: raw never discarded, auth+tenancy, integrates with existing Analyze flow"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verify layering, auth+ownership, zod, parser is pure + unit-tested, DoD green"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Verify upload/identity-picker client component scoping; no secrets client-side"}

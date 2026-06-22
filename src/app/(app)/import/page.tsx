@@ -3,6 +3,7 @@ import { getActiveProject } from "@/lib/services/projects";
 import { listContexts } from "@/lib/services/contexts";
 import { MATERIAL_SOURCES, listMaterials } from "@/lib/services/materials";
 import { ImportClient } from "./import-client";
+import { GoogleChatImportClient } from "./google-chat-client";
 
 export default async function ImportPage() {
   const user = await getCurrentUser();
@@ -39,6 +40,8 @@ export default async function ImportPage() {
         sourceTypes={[...MATERIAL_SOURCES]}
         contexts={contexts.map((c) => ({ id: c.id, type: c.type, name: c.name }))}
       />
+
+      <GoogleChatImportClient projectId={project.id} />
 
       <section className="space-y-3 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
         <h2 className="font-medium">Imported materials ({materials.length})</h2>

@@ -1,0 +1,4 @@
+{"file": "docs/self_distiller_prd_en.md", "reason": "Material model §10.3/§11.5, import analyzer §13.1, evidence weighting §15.2 (chat=high but treat only the user's lines as their style)"}
+{"file": ".trellis/tasks/06-22-self-distiller-mvp/prd.md", "reason": "Architecture + invariants (raw never discarded, source_type tagging, auth+tenancy)"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend conventions: service layering, auth+ownership, zod, pure-helper testing, DoD"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Frontend conventions: server components/actions, client component for file upload + identity picker"}
