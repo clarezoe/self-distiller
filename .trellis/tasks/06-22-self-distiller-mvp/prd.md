@@ -70,6 +70,14 @@ Additional providers pluggable later via new adapters.
 - LLM access via provider-agnostic layer (`lib/llm`); user selects provider/model; backends: OpenAI-compatible API + Anthropic/Claude (real adapters), ChatGPT-subscription disabled placeholder; pluggable for more.
 - Single-user self-host MVP with multi-tenant schema (`user_id` everywhere) and swappable auth; subscription-OAuth gated by `SELF_HOST`.
 
+## Build Status (2026-06-22)
+
+All 5 phases built, reviewed (trellis-check), and committed on branch `feat/mvp`:
+- Foundation `0a35b3d` · spec `5436d13` · Phase 2 `d64d8d8` · Phase 3 `749c1de` · Phase 4 `9da6b94` · Phase 5 `9c43d63`.
+- Verified each phase: typecheck, eslint, `next build`, vitest (57 tests total), full app boot (all 9 pages 200 after login).
+- **Not verified** (environment limits): live-LLM behavior/quality (no API key) and Docker image build (no daemon). These are not "directly completable" here.
+- Review caught + fixed real bugs: OpenAI strict-mode schema incompat (P2), first-version provenance gap (P3), server-side sensitive-topic enforcement leak (P5).
+
 ## Technical Approach
 
 ### Architecture

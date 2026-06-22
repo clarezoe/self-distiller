@@ -21,9 +21,11 @@ the rest conversationally.
 
 ## Status (update the checkboxes as you complete each item)
 
-- [ ] Fill backend guidelines
-- [ ] Fill frontend guidelines
-- [ ] Add code examples
+- [x] Fill backend guidelines — `quality-guidelines.md` + `directory-structure.md` filled with real conventions from the Foundation build (Next 16 / Prisma 7 / Auth.js v5, layering, auth+tenancy, invariants, DoD). Niche stubs (database/error-handling/logging) consolidated into quality-guidelines.
+- [x] Fill frontend guidelines — `component-guidelines.md` + `directory-structure.md` filled (server components + server actions, SubmitButton/pending, client-component scoping). Niche stubs (hooks/state/type-safety) consolidated into component-guidelines.
+- [x] Add code examples — guidelines reference real files (`src/lib/db.ts`, `src/lib/llm`, `src/app/(app)/*`, `src/components/submit-button.tsx`). Proven: phase sub-agents built 4 phases consistently against these specs.
+
+Done — spec captures the team's actual conventions. Proceed to `task.py finish` / `archive`.
 
 ---
 
