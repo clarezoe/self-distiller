@@ -11,6 +11,7 @@ export const PROVIDER_OPTIONS: { value: Provider | "chatgpt_subscription"; label
 
 export const AGENT_ROLES = [
   "import_analyzer",
+  "self_model_generator",
   "interview_planner",
   "interview_extractor",
   "blind_comparator",
@@ -30,7 +31,11 @@ export type CompleteParams = {
   messages: LlmMessage[];
   model: string;
   // When provided, the adapter forces structured JSON output matching this schema.
-  schema?: { name: string; schema: JsonSchema };
+  // `strict` (default true) maps to OpenAI Structured Outputs strict mode, whose
+  // schema subset forbids open-ended maps (additionalProperties:true), optional
+  // properties, and keywords like minItems. Set `strict: false` for schemas with
+  // user-defined dynamic keys (e.g. the Self Model's context maps, PRD §23.8).
+  schema?: { name: string; schema: JsonSchema; strict?: boolean };
   temperature?: number;
   maxTokens?: number;
 };

@@ -1,1 +1,4 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": "docs/self_distiller_prd_en.md", "reason": "Product spec: §6.1/§9.1/§9.5 import flow, §12 Self Model JSON schema, §13.1 import analyzer, §14 prompt templates, §15 evidence weighting/time-decay, §19.1 acceptance"}
+{"file": ".trellis/tasks/06-22-self-distiller-mvp/prd.md", "reason": "Locked architecture (D1-D6): LLM layer, schema, core invariants (proposals-only, immutable versions, evidence traceable)"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend conventions: Next16/Prisma7/AuthJS5 specifics, service layering, auth+tenancy checks, runAgent usage, invariants, DoD"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Frontend conventions: server components + server actions, SubmitButton pending pattern, result banners, async searchParams"}

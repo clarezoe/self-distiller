@@ -28,7 +28,8 @@ export const openAiCompatibleAdapter: LlmAdapter = {
               json_schema: {
                 name: params.schema.name,
                 schema: params.schema.schema,
-                strict: true,
+                // Default to strict; schemas with dynamic/open-ended keys opt out.
+                strict: params.schema.strict ?? true,
               },
             },
           }

@@ -1,1 +1,4 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": "docs/self_distiller_prd_en.md", "reason": "Verify against §12 schema, §13.1 analyzer requirements, §15 weighting, §19.1 acceptance"}
+{"file": ".trellis/tasks/06-22-self-distiller-mvp/prd.md", "reason": "Verify core invariants honored: proposals-only, immutable SelfModel versions, evidence traceable, raw never deleted"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verify layering, auth+ownership checks, zod validation, runAgent usage, DoD (typecheck/lint/build/test green)"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Verify server-action + SubmitButton patterns, async searchParams, no secrets client-side"}
