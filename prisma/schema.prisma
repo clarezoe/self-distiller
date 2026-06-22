@@ -337,7 +337,7 @@ enum UpdateSourceType {
 model ModelUpdate {
   id              String           @id @default(cuid())
   projectId       String
-  previousModelId String
+  previousModelId String? // null for the very first version (v0.1) — still records provenance
   newModelId      String?
   sourceType      UpdateSourceType
   sourceId        String
@@ -348,7 +348,7 @@ model ModelUpdate {
   createdAt       DateTime         @default(now())
 
   project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  previousModel SelfModel  @relation("PrevModel", fields: [previousModelId], references: [id], onDelete: Cascade)
+  previousModel SelfModel? @relation("PrevModel", fields: [previousModelId], references: [id], onDelete: SetNull)
   newModel      SelfModel? @relation("NewModel", fields: [newModelId], references: [id], onDelete: SetNull)
 
   @@index([projectId])

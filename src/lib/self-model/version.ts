@@ -57,21 +57,19 @@ export async function createVersion(
       },
     });
 
-    if (previous) {
-      // ModelUpdate.previousModelId is required; only recorded when a prior model exists.
-      await tx.modelUpdate.create({
-        data: {
-          projectId,
-          previousModelId: previous.id,
-          newModelId: created.id,
-          sourceType: source.sourceType,
-          sourceId: source.sourceId,
-          updateSummary: source.updateSummary ?? `Generated Self Model ${version}`,
-          affectedPaths: source.affectedPaths ?? [],
-          userApproved: true, // user explicitly triggered generation
-        },
-      });
-    }
+    // Always record provenance — previousModelId is null for the first version (v0.1).
+    await tx.modelUpdate.create({
+      data: {
+        projectId,
+        previousModelId: previous?.id, // undefined → null for the first version
+        newModelId: created.id,
+        sourceType: source.sourceType,
+        sourceId: source.sourceId,
+        updateSummary: source.updateSummary ?? `Generated Self Model ${version}`,
+        affectedPaths: source.affectedPaths ?? [],
+        userApproved: true, // user explicitly triggered generation
+      },
+    });
 
     return created;
   });
