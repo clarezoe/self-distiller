@@ -1,0 +1,4 @@
+{"file": "docs/self_distiller_prd_en.md", "reason": "Product source of truth: §11 data model, §12 Self Model JSON schema, §17 stack/dir structure, §18 API shapes — implement schema + scaffold to match"}
+{"file": ".trellis/tasks/06-22-self-distiller-mvp/prd.md", "reason": "Locked architecture (D1-D6): LLM layer design, Auth.js, Postgres+Prisma, multi-tenant schema, core invariants to enforce"}
+{"file": ".trellis/tasks/06-22-self-distiller-mvp/research/claude-oauth-sdk.md", "reason": "Anthropic adapter: API-key path is the clean server option; Claude OAuth-via-SDK is self-host-only, flag-gated — build adapter accordingly"}
+{"file": ".trellis/tasks/06-22-self-distiller-mvp/research/chatgpt-subscription-auth.md", "reason": "Why ChatGPT-subscription is a disabled placeholder; OpenAI-compatible (base_url+key) covers OpenAI/OpenRouter/local with json_schema structured output"}

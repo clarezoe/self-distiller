@@ -1,0 +1,58 @@
+# Self Distiller — self-host stack (app + Postgres).
+#
+# Dev workflow: `docker compose up -d postgres` (or use a local Postgres) and run `pnpm dev`.
+# Full self-host: `docker compose up --build` brings up Postgres, runs migrations + seed
+#   (migrate service), then starts the app on http://localhost:3000.
+#
+# Secrets (AUTH_SECRET, ENCRYPTION_KEY, OWNER_*) come from .env (copy .env.example → .env).
+# DATABASE_URL is overridden here to point at the `postgres` service on the compose network.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: distill-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: distill
+      POSTGRES_PASSWORD: distill
+      POSTGRES_DB: distill_me
+    ports:
+      - "5433:5432" # host 5433 → container 5432 (avoids clashing with a local Postgres)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U distill -d distill_me"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      target: builder
+    command: sh -c "pnpm prisma migrate deploy && pnpm db:seed"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://distill:distill@postgres:5432/distill_me?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://distill:distill@postgres:5432/distill_me?schema=public
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:

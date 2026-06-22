@@ -1,0 +1,2 @@
+{"file": "docs/self_distiller_prd_en.md", "reason": "Verify schema (§11), Self Model JSON (§12), API shapes (§18) and core invariants (§23) match the spec"}
+{"file": ".trellis/tasks/06-22-self-distiller-mvp/prd.md", "reason": "Verify implementation honors locked decisions D1-D6 and enforced invariants (proposals-only, immutable versions, secrets server-side, multi-tenant scoping)"}

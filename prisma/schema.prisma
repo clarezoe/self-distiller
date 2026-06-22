@@ -1,0 +1,402 @@
+// Self Distiller — full MVP schema (PRD §11/§12 + Auth.js + LLM config).
+// Tenancy: domain rows scoped by projectId (Project.userId); user-level rows carry userId.
+// SelfModel rows are immutable; updates create new versions (PRD §23).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url is supplied by prisma.config.ts (CLI) and PrismaClient datasourceUrl (runtime) — Prisma 7 convention.
+}
+
+// ---------------------------------------------------------------------------
+// Auth.js (NextAuth v5) + Prisma adapter
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String? // Credentials provider (single owner); null for OAuth users
+  role          String    @default("owner")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts    Account[]
+  sessions    Session[]
+  projects    Project[]
+  credentials Credential[]
+  llmSettings LlmSettings?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// Per-user LLM config + encrypted credentials (D2/D6)
+// ---------------------------------------------------------------------------
+
+model LlmSettings {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  defaultProvider String   @default("openai_compatible") // openai_compatible | anthropic
+  defaultModel    String?
+  agentOverrides  Json     @default("{}") // { "<agentRole>": "<model>" }
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Credential {
+  id        String   @id @default(cuid())
+  userId    String
+  provider  String // openai_compatible | anthropic
+  label     String?
+  baseUrl   String? // openai-compatible endpoints (OpenAI / OpenRouter / local)
+  secret    String // AES-256-GCM, stored as "iv:authTag:ciphertext" (hex). Never sent to client.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}
+
+// ---------------------------------------------------------------------------
+// Domain (PRD §11)
+// ---------------------------------------------------------------------------
+
+model Project {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  goal      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contexts            Context[]
+  contextCombinations ContextCombination[]
+  rawMaterials        RawMaterial[]
+  evidenceItems       EvidenceItem[]
+  selfModels          SelfModel[]
+  interviews          Interview[]
+  blindCalibrations   BlindCalibration[]
+  modelUpdates        ModelUpdate[]
+  taskOutputs         TaskOutput[]
+
+  @@index([userId])
+}
+
+enum ContextType {
+  language
+  role
+  relationship
+  scene
+}
+
+model Context {
+  id          String      @id @default(cuid())
+  projectId   String
+  type        ContextType
+  name        String
+  description String?
+  metadata    Json        @default("{}")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+enum CombinationStatus {
+  new
+  training
+  trained
+  needs_more_data
+}
+
+model ContextCombination {
+  id                    String            @id @default(cuid())
+  projectId             String
+  name                  String
+  languageContextId     String?
+  roleContextId         String?
+  relationshipContextId String?
+  sceneContextId        String?
+  description           String?
+  status                CombinationStatus @default(new)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  project           Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  blindCalibrations BlindCalibration[]
+
+  @@index([projectId])
+}
+
+enum MaterialSource {
+  chat
+  copywriting
+  email
+  social_post
+  diary
+  course_script
+  product_text
+  sales_reply
+  chatgpt_conversation
+  interview
+  blind_calibration
+  task_feedback
+  other
+}
+
+model RawMaterial {
+  id             String         @id @default(cuid())
+  projectId      String
+  sourceType     MaterialSource
+  content        String
+  language       String?
+  contextIds     String[]
+  sourceMetadata Json           @default("{}")
+  materialTime   DateTime?
+  createdAt      DateTime       @default(now())
+
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  evidenceItems EvidenceItem[]
+
+  @@index([projectId])
+}
+
+enum SignalType {
+  fact
+  voice_pattern
+  reaction_pattern
+  decision_pattern
+  relationship_pattern
+  language_pattern
+  boundary
+  current_state
+}
+
+enum StabilityLevel {
+  low
+  medium
+  high
+}
+
+model EvidenceItem {
+  id            String         @id @default(cuid())
+  projectId     String
+  rawMaterialId String?
+  claim         String
+  evidenceText  String
+  contextIds    String[]
+  signalType    SignalType
+  confidence    Float
+  stability     StabilityLevel
+  firstSeen     DateTime
+  lastSeen      DateTime
+  createdAt     DateTime       @default(now())
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rawMaterial RawMaterial? @relation(fields: [rawMaterialId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([rawMaterialId])
+}
+
+enum ModelStatus {
+  active
+  archived
+}
+
+model SelfModel {
+  id                 String      @id @default(cuid())
+  projectId          String
+  version            String
+  status             ModelStatus @default(active)
+  coreSelf           Json        @default("{}")
+  languageModels     Json        @default("{}")
+  roleModels         Json        @default("{}")
+  relationshipModels Json        @default("{}")
+  sceneModels        Json        @default("{}")
+  currentState       Json        @default("{}")
+  boundaries         Json        @default("{}")
+  unknowns           Json        @default("{}")
+  createdAt          DateTime    @default(now())
+
+  project           Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  updatesAsPrevious ModelUpdate[] @relation("PrevModel")
+  updatesAsNew      ModelUpdate[] @relation("NewModel")
+
+  @@unique([projectId, version])
+  @@index([projectId])
+}
+
+enum InterviewType {
+  daily
+  information
+  role
+  language
+  relationship
+  stress
+  conflict
+  creative
+}
+
+model Interview {
+  id                 String        @id @default(cuid())
+  projectId          String
+  type               InterviewType
+  interviewerPersona String
+  targetContextIds   String[]
+  goal               String
+  transcript         Json          @default("[]") // [{ speaker, text, timestamp }]
+  extractionReport   Json?
+  createdAt          DateTime      @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+enum CalibrationDecision {
+  accepted
+  partially_accepted
+  rejected
+  edited
+}
+
+model BlindCalibration {
+  id                   String               @id @default(cuid())
+  projectId            String
+  contextCombinationId String?
+  scenario             String
+  incomingMessage      String?
+  hiddenAgentAnswer    String // INVARIANT: never returned to client before userAnswer is submitted (PRD §23.9)
+  userAnswer           String?
+  comparisonReport     Json?
+  updateProposal       Json?
+  userDecision         CalibrationDecision?
+  createdAt            DateTime             @default(now())
+
+  project            Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contextCombination ContextCombination? @relation(fields: [contextCombinationId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+}
+
+enum UpdateSourceType {
+  import
+  interview
+  blind_calibration
+  task_feedback
+}
+
+model ModelUpdate {
+  id              String           @id @default(cuid())
+  projectId       String
+  previousModelId String
+  newModelId      String?
+  sourceType      UpdateSourceType
+  sourceId        String
+  updateSummary   String
+  affectedPaths   String[]
+  confidenceDelta Float?
+  userApproved    Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  previousModel SelfModel  @relation("PrevModel", fields: [previousModelId], references: [id], onDelete: Cascade)
+  newModel      SelfModel? @relation("NewModel", fields: [newModelId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+}
+
+enum TaskType {
+  chat_reply
+  copywriting
+  video_script
+  course
+  email
+  sales_reply
+  rewrite
+  decision_support
+}
+
+model TaskOutput {
+  id         String   @id @default(cuid())
+  projectId  String
+  taskType   TaskType
+  input      String
+  contextIds String[]
+  output     String
+  feedback   Json? // { likeness_score?, usefulness_score?, comments?, labels? }
+  createdAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// ---------------------------------------------------------------------------
+// LLM call log (PRD §17.3: store raw + parsed response for debugging)
+// ---------------------------------------------------------------------------
+
+model LlmCallLog {
+  id             String   @id @default(cuid())
+  userId         String?
+  projectId      String?
+  agentRole      String?
+  provider       String
+  model          String
+  request        Json
+  rawResponse    Json?
+  parsedResponse Json?
+  error          String?
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([projectId])
+}
