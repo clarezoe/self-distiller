@@ -1,1 +1,4 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": "docs/self_distiller_prd_en.md", "reason": "Product spec: §4.4/§6.4/§9.3 blind calibration flow, §13.4 comparator, §14.1 hidden-answer prompt, §14.2 comparison prompt, §15.1 update levels, §18.7/§18.8 API, §19.3 acceptance"}
+{"file": ".trellis/tasks/06-22-self-distiller-mvp/prd.md", "reason": "Architecture + invariants — esp. §23.9 hiddenAgentAnswer never revealed before userAnswer; proposals-only; immutable versions"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend conventions: layering, auth+tenancy, runAgent schema, invariants, DoD"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Frontend conventions: server components/actions, SubmitButton, client component for answer entry, no secrets/hidden-answer client-side"}

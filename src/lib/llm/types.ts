@@ -14,6 +14,7 @@ export const AGENT_ROLES = [
   "self_model_generator",
   "interview_planner",
   "interview_extractor",
+  "blind_hidden",
   "blind_comparator",
   "persona_router",
   "output_generator",
