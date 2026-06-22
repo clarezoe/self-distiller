@@ -65,6 +65,15 @@ export function isContextType(value: string): value is ContextType {
   return (CONTEXT_TYPES as readonly string[]).includes(value);
 }
 
+// Resolve specific Context rows by id, scoped to a project (so client-supplied ids can't reach
+// other projects). Used by Task Output to build a ContextSelection from manually picked contexts.
+export function getContextsByIds(projectId: string, ids: string[]) {
+  if (ids.length === 0) return Promise.resolve([]);
+  return prisma.context.findMany({
+    where: { id: { in: ids }, projectId },
+  });
+}
+
 // Resolve a ContextCombination (ownership-scoped) into its selected context dimensions:
 // the combination name + each linked Context's {type, name}. Used to build the Self Model
 // subset + context summary for blind calibration prompts (PRD §13.5, §14.1, §14.2).

@@ -1,1 +1,4 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": "docs/self_distiller_prd_en.md", "reason": "Product spec: §6.5/§9.4 output flow, §13.5 persona router, §13.6 output generator, §14 prompts, §16.1/§16.3 Draft Mode + sensitive boundaries, §18.10 API"}
+{"file": ".trellis/tasks/06-22-self-distiller-mvp/prd.md", "reason": "Architecture + invariants: Draft Mode only, sensitive-topic stops, no auto-send, proposals-only"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend conventions: layering, auth+tenancy, runAgent schema, invariants, DoD"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Frontend conventions: server components/actions, SubmitButton, client component for the task/feedback UI"}
