@@ -1,0 +1,3 @@
+{"file": "docs/self_distiller_prd_en.md", "reason": "§11.5 material shape, §13.1 analyzer input (chunks must be analyzable), §15.2 only user's lines = style"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend conventions: pure-helper testing, service layering, auth+ownership, DoD"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Frontend conventions: client component for upload/picker, multi-file input"}

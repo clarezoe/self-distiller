@@ -1,0 +1,3 @@
+{"file": "docs/self_distiller_prd_en.md", "reason": "Verify chunks are analyzable (§13.1), §15.2 labeling, §11.5 material/metadata shape"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verify pure chunker + tests, auth+ownership unchanged, layering, DoD green"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Verify multi-file upload client component; no secrets client-side"}

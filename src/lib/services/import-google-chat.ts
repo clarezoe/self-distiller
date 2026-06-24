@@ -4,25 +4,26 @@ import { getProjectForUser } from "@/lib/services/projects";
 import {
   type ParsedConversation,
   type ParsedGoogleChat,
-  type ParsedTurn,
 } from "@/lib/import/google-chat";
+import { chunkConversation } from "@/lib/import/chunk";
 
-// Build the material content for one conversation. The user's own lines are
+// Build the full material content for one conversation. The user's own lines are
 // labeled `me:` and are the primary style signal (PRD §15.2); everyone else is
 // kept as labeled context, NOT treated as the user's style. Owner detection
 // compares the turn's canonical `key` (set by the parser) against `ownerKey` —
 // never a key re-derived from the lossy display `sender`.
+//
+// Kept DRY by delegating to the chunker: with no budget cap there is exactly one
+// chunk whose content is every labeled turn joined by "\n".
 export function conversationToContent(
   conversation: ParsedConversation,
   ownerKey: string,
 ): string {
-  return conversation.turns
-    .map((turn: ParsedTurn) => {
-      const isOwner = turn.key === ownerKey;
-      const label = isOwner ? "me" : turn.sender;
-      return `${label}: ${turn.text}`;
-    })
-    .join("\n");
+  const chunks = chunkConversation(conversation, ownerKey, {
+    targetChars: Number.POSITIVE_INFINITY,
+    maxChars: Number.POSITIVE_INFINITY,
+  });
+  return chunks.map((c) => c.content).join("\n");
 }
 
 export type GoogleChatCommitResult = {
@@ -68,22 +69,28 @@ export async function commitGoogleChatImport(
     isOwner: p.key === ownerKey,
   }));
 
+  // One RawMaterial PER CHUNK. A small conversation chunks to exactly one
+  // material; a 30MB DM chunks into many — each ≤ ~20k chars and Analyze-able.
   for (const conversation of parsed.conversations) {
-    const content = conversationToContent(conversation, ownerKey);
-    if (!content.trim()) continue;
+    const chunks = chunkConversation(conversation, ownerKey);
+    for (const chunk of chunks) {
+      if (!chunk.content.trim()) continue;
 
-    const material = await createMaterial(projectId, {
-      sourceType: MaterialSource.chat,
-      content,
-      sourceMetadata: {
-        source: "google_chat_takeout",
-        spaceName: conversation.spaceName ?? null,
-        participants: participantList,
-        dateRange: conversation.dateRange,
-        ownerKey,
-      },
-    });
-    materialIds.push(material.id);
+      const material = await createMaterial(projectId, {
+        sourceType: MaterialSource.chat,
+        content: chunk.content,
+        sourceMetadata: {
+          source: "google_chat_takeout",
+          spaceName: conversation.spaceName ?? null,
+          part: chunk.part,
+          partsTotal: chunk.partsTotal,
+          dateRange: chunk.dateRange,
+          participants: participantList,
+          ownerKey,
+        },
+      });
+      materialIds.push(material.id);
+    }
   }
 
   return { created: materialIds.length, materialIds };

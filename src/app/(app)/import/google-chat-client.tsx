@@ -18,12 +18,14 @@ type ParticipantOption = {
 type PreviewItem = {
   spaceName: string | null;
   turnCount: number;
+  materialCount: number;
   dateRange: { from?: string; to?: string };
 };
 
 type ParseResult = {
   participants: ParticipantOption[];
   conversationCount: number;
+  materialCount: number;
   preview: PreviewItem[];
 };
 
@@ -155,7 +157,9 @@ export function GoogleChatImportClient({ projectId }: { projectId: string }) {
         <div className="space-y-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
           <p className="text-sm text-neutral-500">
             Found <span className="font-medium text-neutral-700 dark:text-neutral-300">{parseResult.conversationCount}</span>{" "}
-            conversation(s). Which participant is you?
+            conversation(s) — will create about{" "}
+            <span className="font-medium text-neutral-700 dark:text-neutral-300">{parseResult.materialCount}</span>{" "}
+            material(s) (large conversations are split into chunks). Which participant is you?
           </p>
           <div className="space-y-1.5">
             {parseResult.participants.map((p) => (
@@ -190,6 +194,9 @@ export function GoogleChatImportClient({ projectId }: { projectId: string }) {
                       {c.spaceName ?? "(unnamed)"}
                     </span>
                     <span>{c.turnCount} turns</span>
+                    <span>
+                      {c.materialCount} material{c.materialCount === 1 ? "" : "s"}
+                    </span>
                     {c.dateRange.from ? <span>from {c.dateRange.from}</span> : null}
                   </li>
                 ))}

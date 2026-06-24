@@ -5,7 +5,9 @@ import { getProjectForUser } from "@/lib/services/projects";
 import { parseGoogleChat } from "@/lib/import/google-chat";
 import { commitGoogleChatImport, UnknownOwnerError } from "@/lib/services/import-google-chat";
 
-const MAX_TOTAL_CHARS = 20_000_000;
+// Matches the parse route: the biggest real single DM messages.json is ~30MB,
+// so a 64MB total cap leaves headroom for batch uploads. Above this → 413.
+const MAX_TOTAL_CHARS = 64_000_000;
 
 const fileSchema = z.object({
   content: z.string().min(1),
