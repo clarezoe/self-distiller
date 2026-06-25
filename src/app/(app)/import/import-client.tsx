@@ -77,17 +77,39 @@ export function ImportClient({
         }),
       });
       if (!createRes.ok) throw new Error(await readError(createRes, "Failed to save material"));
-      const material = (await createRes.json()) as { id: string; created: number };
+      const material = (await createRes.json()) as {
+        id: string | null;
+        created: number;
+        skipped: number;
+      };
+
+      // Everything in this paste was already imported (content-hash dedup).
+      // No new material exists to analyze — report the intentional skip instead
+      // of calling analyze with a null id (which would 404 "Material not found").
+      if (material.created === 0) {
+        setDone(
+          `This content was already imported — skipped ${material.skipped} duplicate${material.skipped === 1 ? "" : "s"}. Nothing new to analyze.`,
+        );
+        return;
+      }
 
       // A large paste/upload is split into several Analyze-able materials.
       // Tell the user so they understand one input became many; the Analyze
       // flow below still runs per-material (here, the first chunk).
       if (material.created > 1) {
+        const dupNote =
+          material.skipped > 0
+            ? ` (${material.skipped} duplicate chunk${material.skipped === 1 ? "" : "s"} skipped)`
+            : "";
         setDone(
-          `Created ${material.created} materials from this text (it was large). Analyzing the first…`,
+          `Created ${material.created} materials from this text (it was large)${dupNote}. Analyzing the first…`,
         );
       }
 
+      if (!material.id) {
+        setError("No material to analyze.");
+        return;
+      }
       const analyzeRes = await fetch(`/api/materials/${material.id}/analyze`, {
         method: "POST",
       });

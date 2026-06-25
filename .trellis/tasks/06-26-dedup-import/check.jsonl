@@ -1,0 +1,3 @@
+{"file": "docs/self_distiller_prd_en.md", "reason": "Verify §11.5/§11.6 shapes, §15.2 dup-harm rationale, §19.1 acceptance"}
+{"file": ".trellis/tasks/06-22-self-distiller-mvp/prd.md", "reason": "Verify invariants: skip reported not silent, per-project dedup, auth+ownership unchanged"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verify pure helpers + tests, migration correctness, layering, DoD green"}

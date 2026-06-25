@@ -103,8 +103,14 @@ export function GoogleChatImportClient({ projectId }: { projectId: string }) {
         body: JSON.stringify({ projectId, files, ownerKey }),
       });
       if (!res.ok) throw new Error(await readError(res, "Failed to create materials"));
-      const result = (await res.json()) as { created: number };
-      setDone(`Created ${result.created} material${result.created === 1 ? "" : "s"}. Analyze them above.`);
+      const result = (await res.json()) as { created: number; skipped: number };
+      const skipNote =
+        result.skipped > 0
+          ? ` (${result.skipped} duplicate${result.skipped === 1 ? "" : "s"} skipped)`
+          : "";
+      setDone(
+        `Created ${result.created} material${result.created === 1 ? "" : "s"}${skipNote}. Analyze them above.`,
+      );
       setParseResult(null);
       setFiles([]);
       startTransition(() => router.refresh());

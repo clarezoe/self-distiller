@@ -1,0 +1,3 @@
+{"file": "docs/self_distiller_prd_en.md", "reason": "§11.5 RawMaterial / §11.6 EvidenceItem shape, §15.2 frequency weighting (why dups harm), §19.1 import"}
+{"file": ".trellis/tasks/06-22-self-distiller-mvp/prd.md", "reason": "Invariants: raw never discarded (skip must be reported, not silent), auth+tenancy, per-project scoping"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend conventions: pure-helper testing, service layering, migrations, auth+ownership, DoD"}

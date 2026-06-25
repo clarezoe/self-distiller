@@ -45,7 +45,7 @@ export async function analyzeMaterial(userId: string, projectId: string, materia
   }
 
   const time = material.materialTime ?? material.createdAt;
-  const evidence = await createEvidenceItems(
+  const { created: evidence, skipped } = await createEvidenceItems(
     projectId,
     parsed.evidence_items.map((e) => ({
       rawMaterialId: material.id,
@@ -60,7 +60,7 @@ export async function analyzeMaterial(userId: string, projectId: string, materia
     })),
   );
 
-  return { classification: parsed.classification, evidence };
+  return { classification: parsed.classification, evidence, skipped };
 }
 
 // Generate a Self Model JSON (§12) from user-accepted evidence (LLM).

@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const materials = await createMaterials(parsed.data.projectId, {
+  const { created, skipped } = await createMaterials(parsed.data.projectId, {
     sourceType: parsed.data.sourceType as MaterialSource,
     content: parsed.data.content,
     language: parsed.data.language,
@@ -64,13 +64,15 @@ export async function POST(request: Request) {
     materialTime: parsed.data.materialTime ? new Date(parsed.data.materialTime) : null,
   });
   // Large pastes split into several materials; keep `id` (the first) for the
-  // existing single-material Analyze flow, and report the full set + count.
+  // existing single-material Analyze flow, and report the full set + counts.
+  // `skipped` surfaces dedup: a re-import of identical content creates nothing.
   return NextResponse.json(
     {
-      id: materials[0].id,
-      created: materials.length,
-      ids: materials.map((m) => m.id),
-      materials,
+      id: created[0]?.id ?? null,
+      created: created.length,
+      skipped,
+      ids: created.map((m) => m.id),
+      materials: created,
     },
     { status: 201 },
   );

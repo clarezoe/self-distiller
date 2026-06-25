@@ -196,6 +196,10 @@ model RawMaterial {
   projectId      String
   sourceType     MaterialSource
   content        String
+  // SHA-256 of NORMALIZED content (lib/import/hash). Used to dedup re-imports
+  // per project. Nullable: pre-existing rows are left null (NULLs are distinct
+  // under the unique index, so they never collide).
+  contentHash    String?
   language       String?
   contextIds     String[]
   sourceMetadata Json           @default("{}")
@@ -205,6 +209,7 @@ model RawMaterial {
   project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   evidenceItems EvidenceItem[]
 
+  @@unique([projectId, contentHash])
   @@index([projectId])
 }
 

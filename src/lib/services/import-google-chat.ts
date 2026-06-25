@@ -1,5 +1,5 @@
 import { MaterialSource } from "@/generated/prisma/client";
-import { createMaterial } from "@/lib/services/materials";
+import { createMaterialsBatch, type MaterialInput } from "@/lib/services/materials";
 import { getProjectForUser } from "@/lib/services/projects";
 import {
   type ParsedConversation,
@@ -28,6 +28,9 @@ export function conversationToContent(
 
 export type GoogleChatCommitResult = {
   created: number;
+  // Chunks skipped as content-hash duplicates (re-import of the same export, or
+  // two identical chunks). Intentional dedup, reported — never a silent drop.
+  skipped: number;
   materialIds: string[];
 };
 
@@ -61,7 +64,6 @@ export async function commitGoogleChatImport(
     throw new UnknownOwnerError();
   }
 
-  const materialIds: string[] = [];
   const participantList = parsed.participants.map((p) => ({
     name: p.name,
     email: p.email,
@@ -71,12 +73,15 @@ export async function commitGoogleChatImport(
 
   // One RawMaterial PER CHUNK. A small conversation chunks to exactly one
   // material; a 30MB DM chunks into many — each ≤ ~20k chars and Analyze-able.
+  // Collect every chunk as an input, then insert via the dedup-aware batch so a
+  // re-imported export (or duplicate chunks) is skipped, not double-stored.
+  const inputs: MaterialInput[] = [];
   for (const conversation of parsed.conversations) {
     const chunks = chunkConversation(conversation, ownerKey);
     for (const chunk of chunks) {
       if (!chunk.content.trim()) continue;
 
-      const material = await createMaterial(projectId, {
+      inputs.push({
         sourceType: MaterialSource.chat,
         content: chunk.content,
         sourceMetadata: {
@@ -89,9 +94,9 @@ export async function commitGoogleChatImport(
           ownerKey,
         },
       });
-      materialIds.push(material.id);
     }
   }
 
-  return { created: materialIds.length, materialIds };
+  const { created, skipped } = await createMaterialsBatch(projectId, inputs);
+  return { created: created.length, skipped, materialIds: created.map((m) => m.id) };
 }
