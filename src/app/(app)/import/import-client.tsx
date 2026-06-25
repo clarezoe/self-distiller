@@ -77,7 +77,16 @@ export function ImportClient({
         }),
       });
       if (!createRes.ok) throw new Error(await readError(createRes, "Failed to save material"));
-      const material = (await createRes.json()) as { id: string };
+      const material = (await createRes.json()) as { id: string; created: number };
+
+      // A large paste/upload is split into several Analyze-able materials.
+      // Tell the user so they understand one input became many; the Analyze
+      // flow below still runs per-material (here, the first chunk).
+      if (material.created > 1) {
+        setDone(
+          `Created ${material.created} materials from this text (it was large). Analyzing the first…`,
+        );
+      }
 
       const analyzeRes = await fetch(`/api/materials/${material.id}/analyze`, {
         method: "POST",

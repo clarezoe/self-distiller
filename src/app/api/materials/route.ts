@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { getProjectForUser } from "@/lib/services/projects";
-import { createMaterial, listMaterials } from "@/lib/services/materials";
+import { createMaterials, listMaterials } from "@/lib/services/materials";
 import type { MaterialSource } from "@/generated/prisma/client";
 
 export async function GET(request: Request) {
@@ -56,12 +56,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const material = await createMaterial(parsed.data.projectId, {
+  const materials = await createMaterials(parsed.data.projectId, {
     sourceType: parsed.data.sourceType as MaterialSource,
     content: parsed.data.content,
     language: parsed.data.language,
     contextIds: parsed.data.contextIds,
     materialTime: parsed.data.materialTime ? new Date(parsed.data.materialTime) : null,
   });
-  return NextResponse.json(material, { status: 201 });
+  // Large pastes split into several materials; keep `id` (the first) for the
+  // existing single-material Analyze flow, and report the full set + count.
+  return NextResponse.json(
+    {
+      id: materials[0].id,
+      created: materials.length,
+      ids: materials.map((m) => m.id),
+      materials,
+    },
+    { status: 201 },
+  );
 }
