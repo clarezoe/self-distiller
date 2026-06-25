@@ -1,0 +1,3 @@
+{"file": "docs/self_distiller_prd_en.md", "reason": "§12 Self Model JSON schema (open-ended), §10.6 Self Model page display, §23.8 composable/dynamic keys — render must tolerate any shape"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Frontend conventions: server components, tolerant rendering, evidence links, reuse patterns"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Conventions: pure helper (toMarkdown) testing, DoD green"}

@@ -1,26 +1,114 @@
 // Render a Self Model (§12 JSON) as readable Markdown (PRD §10.6). Pure — unit-tested.
+//
+// The per-context maps (language/role/relationship/scene models) are open-ended (§23.8): values
+// can be nested objects and arrays-of-objects, not just flat strings. So those sections are
+// serialized with a generic recursive walker (`mdEntry`) that never emits `[object Object]`.
+// Core Self / Current State / Boundaries are schema-constrained string arrays and keep their
+// existing bullet layout.
 
-import type {
-  LanguageModel,
-  RelationshipModel,
-  RoleModel,
-  SceneModel,
-  SelfModelJson,
-} from "./schema";
+import type { SelfModelJson } from "./schema";
 
 function bullets(label: string, items?: string[]): string[] {
   if (!items || items.length === 0) return [];
   return [`**${label}:**`, ...items.map((i) => `- ${i}`), ""];
 }
 
-function field(label: string, value?: string): string[] {
-  if (!value) return [];
-  return [`- **${label}:** ${value}`];
+// snake_case / camelCase → "Snake case"
+function humanize(key: string): string {
+  const spaced = key
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .trim();
+  if (!spaced) return key;
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
 }
 
-function fieldArray(label: string, items?: string[]): string[] {
-  if (!items || items.length === 0) return [];
-  return [`- **${label}:** ${items.join(", ")}`];
+function isEmpty(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string") return value.trim() === "";
+  if (Array.isArray(value)) return value.every(isEmpty);
+  if (typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).every(isEmpty);
+  }
+  return false;
+}
+
+function isScalar(value: unknown): value is string | number | boolean {
+  const t = typeof value;
+  return t === "string" || t === "number" || t === "boolean";
+}
+
+function scalarText(value: unknown): string {
+  return String(value);
+}
+
+function labelFor(key: string): string {
+  if (key === "evidence_ids") return "Evidence";
+  return humanize(key);
+}
+
+// Recursively serialize an open-ended JSON value to indented Markdown bullets.
+function mdEntry(value: unknown, indent = 0): string[] {
+  const pad = "  ".repeat(indent);
+
+  if (isEmpty(value)) return [];
+
+  if (isScalar(value)) {
+    return [`${pad}- ${scalarText(value)}`];
+  }
+
+  if (Array.isArray(value)) {
+    const items = value.filter((v) => !isEmpty(v));
+    if (items.length === 0) return [];
+    if (items.every(isScalar)) {
+      return [`${pad}- ${items.map(scalarText).join(", ")}`];
+    }
+    return items.flatMap((v) => mdEntry(v, indent));
+  }
+
+  // object
+  const entries = Object.entries(value as Record<string, unknown>).filter(
+    ([, v]) => !isEmpty(v),
+  );
+  const lines: string[] = [];
+  for (const [key, v] of entries) {
+    const label = labelFor(key);
+    if (isScalar(v)) {
+      lines.push(`${pad}- **${label}:** ${scalarText(v)}`);
+    } else if (Array.isArray(v)) {
+      const items = v.filter((x) => !isEmpty(x));
+      if (items.length === 0) continue;
+      if (items.every(isScalar)) {
+        lines.push(`${pad}- **${label}:** ${items.map(scalarText).join(", ")}`);
+      } else {
+        lines.push(`${pad}- **${label}:**`);
+        lines.push(...items.flatMap((x) => mdEntry(x, indent + 1)));
+      }
+    } else {
+      lines.push(`${pad}- **${label}:**`);
+      lines.push(...mdEntry(v, indent + 1));
+    }
+  }
+  return lines;
+}
+
+// A keyed model map (language_models, role_models, …) → "### key" blocks.
+function mapSection(
+  title: string,
+  record: Record<string, unknown> | undefined,
+): string[] {
+  const lines: string[] = [`## ${title}`, ""];
+  const entries = Object.entries(record ?? {}).filter(([, v]) => !isEmpty(v));
+  if (entries.length === 0) {
+    lines.push("_None yet._", "");
+    return lines;
+  }
+  for (const [key, value] of entries) {
+    lines.push(`### ${key}`);
+    lines.push(...mdEntry(value));
+    lines.push("");
+  }
+  return lines;
 }
 
 export function toMarkdown(model: SelfModelJson): string {
@@ -40,57 +128,11 @@ export function toMarkdown(model: SelfModelJson): string {
   lines.push("## Core Self", "");
   lines.push(...(coreLines.length ? coreLines : ["_No core self captured yet._", ""]));
 
-  // Language models
-  lines.push("## Language Models", "");
-  const langEntries = Object.entries(model.language_models ?? {});
-  if (langEntries.length === 0) {
-    lines.push("_None yet._", "");
-  } else {
-    for (const [key, lm] of langEntries) {
-      lines.push(`### ${key}`);
-      lines.push(...renderLanguage(lm));
-      lines.push("");
-    }
-  }
-
-  // Role models
-  lines.push("## Role Models", "");
-  const roleEntries = Object.entries(model.role_models ?? {});
-  if (roleEntries.length === 0) {
-    lines.push("_None yet._", "");
-  } else {
-    for (const [key, rm] of roleEntries) {
-      lines.push(`### ${key}`);
-      lines.push(...renderRole(rm));
-      lines.push("");
-    }
-  }
-
-  // Relationship models
-  lines.push("## Relationship Models", "");
-  const relEntries = Object.entries(model.relationship_models ?? {});
-  if (relEntries.length === 0) {
-    lines.push("_None yet._", "");
-  } else {
-    for (const [key, rm] of relEntries) {
-      lines.push(`### ${key}`);
-      lines.push(...renderRelationship(rm));
-      lines.push("");
-    }
-  }
-
-  // Scene models
-  lines.push("## Scene Models", "");
-  const sceneEntries = Object.entries(model.scene_models ?? {});
-  if (sceneEntries.length === 0) {
-    lines.push("_None yet._", "");
-  } else {
-    for (const [key, sm] of sceneEntries) {
-      lines.push(`### ${key}`);
-      lines.push(...renderScene(sm));
-      lines.push("");
-    }
-  }
+  // Open-ended context maps (tolerant recursive render).
+  lines.push(...mapSection("Language Models", model.language_models));
+  lines.push(...mapSection("Role Models", model.role_models));
+  lines.push(...mapSection("Relationship Models", model.relationship_models));
+  lines.push(...mapSection("Scene Models", model.scene_models));
 
   // Current state
   const cs = model.current_state ?? {};
@@ -130,59 +172,4 @@ export function toMarkdown(model: SelfModelJson): string {
   }
 
   return lines.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
-}
-
-function renderLanguage(lm: LanguageModel): string[] {
-  return [
-    ...field("Voice", lm.voice_summary),
-    ...field("Professional style", lm.professional_style),
-    ...field("Casual style", lm.casual_style),
-    ...field("Current level", lm.current_level),
-    ...field("Improvement trend", lm.improvement_trend),
-    ...fieldArray("Sentence patterns", lm.sentence_patterns),
-    ...fieldArray("Tone patterns", lm.tone_patterns),
-    ...fieldArray("Common words", lm.common_words),
-    ...fieldArray("Common mistakes", lm.common_mistakes),
-    ...fieldArray("Avoid", lm.avoid),
-    ...(lm.polish_policy
-      ? [`- **Polish policy:** ${JSON.stringify(lm.polish_policy)}`]
-      : []),
-    ...(typeof lm.confidence === "number"
-      ? [`- **Confidence:** ${lm.confidence}`]
-      : []),
-  ];
-}
-
-function renderRole(rm: RoleModel): string[] {
-  return [
-    ...field("Style", rm.style_summary),
-    ...field("Feedback style", rm.feedback_style),
-    ...field("Conflict style", rm.conflict_style),
-    ...field("Task assignment style", rm.task_assignment_style),
-    ...field("Comfort style", rm.comfort_style),
-    ...field("Worry style", rm.worry_style),
-    ...field("Discipline style", rm.discipline_style),
-    ...fieldArray("Boundaries", rm.boundaries),
-    ...fieldArray("Evidence", rm.evidence_ids),
-  ];
-}
-
-function renderRelationship(rm: RelationshipModel): string[] {
-  return [
-    ...field("Style", rm.style_summary),
-    ...field("Humor", rm.humor),
-    ...field("Comfort style", rm.comfort_style),
-    ...field("Reply length", rm.reply_length),
-    ...field("Emoji policy", rm.emoji_policy),
-    ...fieldArray("Sensitive boundaries", rm.sensitive_boundaries),
-    ...fieldArray("Evidence", rm.evidence_ids),
-  ];
-}
-
-function renderScene(sm: SceneModel): string[] {
-  return [
-    ...field("Default intent", sm.default_intent),
-    ...fieldArray("Typical structure", sm.typical_structure),
-    ...fieldArray("Avoid", sm.avoid),
-  ];
 }

@@ -74,6 +74,48 @@ describe("toMarkdown", () => {
     expect(md).toContain("Sample boss feedback under delay");
   });
 
+  it("renders open-ended nested shapes (objects + arrays-of-objects) without [object Object]", () => {
+    // The real generated model nests objects/arrays where the narrow TS types expect strings.
+    const model = {
+      ...emptySelfModel("0.3"),
+      language_models: {
+        sv: {
+          register: {
+            default: "informal, practical, friendly",
+            close_friends: "casual Swedish with emoji",
+          },
+          voice_features: [
+            {
+              feature: "Uses Swedish for everyday coordination.",
+              examples: ["Kan du ta honom i selen"],
+              evidence_ids: ["ev_a"],
+            },
+          ],
+          common_mistakes: [
+            { type: "spelling", examples: ["biletter instead of biljetter"] },
+          ],
+          polish_policy: "Keep the user's non-native Swedish flavor.",
+          confidence: 0.82,
+          evidence_ids: ["ev_a", "ev_b"],
+        },
+      },
+    } as unknown as SelfModelJson;
+
+    const md = toMarkdown(model);
+    expect(md).not.toContain("[object Object]");
+    expect(md).toContain("### sv");
+    expect(md).toContain("**Register:**");
+    expect(md).toContain("**Default:** informal, practical, friendly");
+    expect(md).toContain("**Voice features:**");
+    expect(md).toContain("Uses Swedish for everyday coordination.");
+    expect(md).toContain("Kan du ta honom i selen");
+    expect(md).toContain("**Common mistakes:**");
+    expect(md).toContain("biletter instead of biljetter");
+    expect(md).toContain("Keep the user's non-native Swedish flavor.");
+    expect(md).toContain("**Confidence:** 0.82");
+    expect(md).toContain("**Evidence:** ev_a, ev_b");
+  });
+
   it("collapses excessive blank lines and ends with a single newline", () => {
     const md = toMarkdown(emptySelfModel());
     expect(md).not.toMatch(/\n{3,}/);
