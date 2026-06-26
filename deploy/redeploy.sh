@@ -15,9 +15,16 @@ rsync -az --delete \
   -e "ssh -o ConnectTimeout=8" \
   "$REPO_ROOT/" "$SSH_HOST:/opt/distill-src/"
 
-echo "Building image on the box…"
+echo "Building app + migrate images on the box…"
 ssh -o ConnectTimeout=8 "$SSH_HOST" \
-  'cd /opt/distill-src && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 docker build -t distill-app:latest . 2>&1 | tail -3'
+  'cd /opt/distill-src && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 docker build -t distill-app:latest . 2>&1 | tail -2 && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 docker build --target builder -t distill-migrate:latest . 2>&1 | tail -2'
+
+echo "Applying DB migrations (prisma migrate deploy)…"
+ssh -o ConnectTimeout=8 "$SSH_HOST" '
+  set -a; . /opt/distill/.env.deploy; set +a
+  docker run --rm --network dokploy-network \
+    -e DATABASE_URL="postgresql://distill:${PGPASS}@distill_postgres:5432/distill_me?schema=public" \
+    distill-migrate:latest pnpm exec prisma migrate deploy 2>&1 | tail -6'
 
 echo "Rolling app service…"
 ssh -o ConnectTimeout=8 "$SSH_HOST" 'docker service update --force --image distill-app:latest distill_app >/dev/null 2>&1 && echo rolled'
