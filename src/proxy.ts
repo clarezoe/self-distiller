@@ -5,5 +5,9 @@
 export { auth as proxy } from "@/lib/proxy-auth";
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  // Exclude static + PWA assets (manifest, service worker, icons) so they are
+  // publicly reachable without the auth redirect — required for installability.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:js|json|webmanifest|map|svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };
