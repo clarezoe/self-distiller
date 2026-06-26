@@ -1,0 +1,49 @@
+# Docker Swarm stack for self-host deploy on feifeiecom (Dokploy box).
+# Joins the existing `dokploy-network` overlay so Traefik can route to it.
+# Secrets come from the shell env at deploy time (set -a; source .env.deploy):
+#   PGPASS, AUTH_SECRET, ENCRYPTION_KEY
+# Deploy: docker stack deploy -c stack.yml distill
+# Service DNS names become distill_postgres / distill_app on the overlay.
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: distill
+      POSTGRES_PASSWORD: ${PGPASS}
+      POSTGRES_DB: distill_me
+    volumes:
+      - distill-pgdata:/var/lib/postgresql/data
+    networks:
+      - dokploy-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+
+  app:
+    image: distill-app:latest
+    environment:
+      DATABASE_URL: postgresql://distill:${PGPASS}@distill_postgres:5432/distill_me?schema=public
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_URL: https://distill.feifeiecom.com
+      AUTH_TRUST_HOST: "true"
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      SELF_HOST: "true"
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    networks:
+      - dokploy-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+
+networks:
+  dokploy-network:
+    external: true
+
+volumes:
+  distill-pgdata:

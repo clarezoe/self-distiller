@@ -1,0 +1,33 @@
+# Traefik dynamic config for distill.feifeiecom.com.
+# Copy to /etc/dokploy/traefik/dynamic/distill.yml on the box (Traefik file
+# provider hot-reloads it). Routes to the swarm service distill_app:3000 on
+# dokploy-network. Names are distill-prefixed so nothing collides with other apps.
+http:
+  middlewares:
+    distill-redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+  routers:
+    distill-router-web:
+      rule: Host(`distill.feifeiecom.com`)
+      service: distill-service
+      middlewares:
+        - distill-redirect-to-https
+      entryPoints:
+        - web
+      priority: 100
+    distill-router-websecure:
+      rule: Host(`distill.feifeiecom.com`)
+      service: distill-service
+      entryPoints:
+        - websecure
+      priority: 100
+      tls:
+        certResolver: letsencrypt
+  services:
+    distill-service:
+      loadBalancer:
+        servers:
+          - url: http://distill_app:3000
+        passHostHeader: true
