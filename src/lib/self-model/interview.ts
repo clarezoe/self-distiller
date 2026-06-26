@@ -28,6 +28,7 @@ export async function planInterview(
     type: InterviewType;
     interviewerPersona: string;
     targetContextIds?: string[];
+    language?: string;
     goal?: string;
   },
 ): Promise<InterviewPlan> {
@@ -52,6 +53,7 @@ export async function planInterview(
     interviewerPersona: input.interviewerPersona,
     goal: input.goal,
     targetContexts: input.targetContextIds,
+    language: input.language,
     modelSubset,
     previousGoals: previous.map((i) => i.goal),
   });
@@ -90,6 +92,7 @@ export async function extractInterview(
     interviewerPersona: interview.interviewerPersona,
     type: interview.type,
     targetContexts: interview.targetContextIds,
+    language: interview.language ?? undefined,
     transcript: transcript.map((t) => ({ speaker: t.speaker, text: t.text })),
   });
 

@@ -1,0 +1,3 @@
+{"file": "docs/self_distiller_prd_en.md", "reason": "Verify §13.2/§13.3/§14.3 prompts thread language; §12 language attribution"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verify layering, zod, migration nullable-safe, auth unchanged, DoD green"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Verify interview-client language selector, no #1/i18n coupling, no secrets client-side"}

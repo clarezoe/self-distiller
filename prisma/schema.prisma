@@ -296,6 +296,7 @@ model Interview {
   type               InterviewType
   interviewerPersona String
   targetContextIds   String[]
+  language           String? // language the interview is CONDUCTED in (zh/en/sv/...); independent of UI locale
   goal               String
   transcript         Json          @default("[]") // [{ speaker, text, timestamp }]
   extractionReport   Json?

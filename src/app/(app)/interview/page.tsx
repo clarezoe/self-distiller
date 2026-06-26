@@ -55,6 +55,11 @@ export default async function InterviewPage() {
                   {i.type}
                 </span>
                 <span className="text-xs text-neutral-400">{i.interviewerPersona}</span>
+                {i.language ? (
+                  <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                    {i.language}
+                  </span>
+                ) : null}
                 <span className="truncate text-neutral-500">{i.goal}</span>
                 <span className="ml-auto shrink-0 text-xs text-neutral-400">
                   {i.extractionReport ? "extracted" : "no report"}

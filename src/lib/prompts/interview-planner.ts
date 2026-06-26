@@ -75,10 +75,13 @@ export function buildInterviewPlannerMessages(input: {
   targetContexts?: string[];
   modelSubset?: PlannerSelfModelSubset;
   previousGoals?: string[];
+  // Language the interview is CONDUCTED in (e.g. "zh"/"en"/"sv" or a label). Independent of UI locale.
+  language?: string;
 }): LlmMessage[] {
   const typeHint = INTERVIEW_TYPE_HINTS[input.type] ?? "Sample the requested context.";
   const unknowns = input.modelSubset?.unknowns ?? [];
   const suggested = input.modelSubset?.suggested_interviews ?? [];
+  const language = input.language?.trim();
 
   const contextBlock =
     input.targetContexts && input.targetContexts.length > 0
@@ -95,6 +98,10 @@ export function buildInterviewPlannerMessages(input: {
       ? `Already-run interview goals (avoid duplicating, build on them):\n- ${input.previousGoals.join("\n- ")}`
       : null;
 
+  const languageBlock = language
+    ? `Interview language: ${language}. Conduct the ENTIRE interview in ${language}; write EVERY question/turn (the "text" field) in ${language}. Note the language in the goal.`
+    : null;
+
   return [
     { role: "system", content: SYSTEM },
     {
@@ -102,6 +109,7 @@ export function buildInterviewPlannerMessages(input: {
       content: [
         `Interview type: ${input.type} — ${typeHint}`,
         `Interviewer persona: ${input.interviewerPersona}`,
+        languageBlock,
         input.goal ? `Requested goal: ${input.goal}` : "No explicit goal given — derive one concrete sampling goal.",
         contextBlock,
         unknownsBlock,

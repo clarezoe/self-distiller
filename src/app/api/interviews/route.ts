@@ -11,6 +11,8 @@ const createSchema = z.object({
   type: z.enum(["daily", "information", "role", "language", "relationship", "stress", "conflict", "creative"]),
   interviewerPersona: z.string().min(1),
   targetContextIds: z.array(z.string().min(1)).optional(),
+  // Language the interview is CONDUCTED in (zh/en/sv/... or a free label). Independent of UI locale.
+  language: z.string().min(1).max(64).optional(),
   goal: z.string().optional(),
 });
 
@@ -38,6 +40,7 @@ export async function POST(request: Request) {
       type: parsed.data.type as InterviewType,
       interviewerPersona: parsed.data.interviewerPersona,
       targetContextIds: parsed.data.targetContextIds,
+      language: parsed.data.language,
       goal: parsed.data.goal,
     });
 
@@ -46,6 +49,7 @@ export async function POST(request: Request) {
       type: parsed.data.type as InterviewType,
       interviewerPersona: plan.interviewer_persona || parsed.data.interviewerPersona,
       targetContextIds: parsed.data.targetContextIds ?? [],
+      language: parsed.data.language,
       goal: plan.goal,
       // Seed the transcript with the first planned interviewer turn.
       transcript: [{ speaker: "agent", text: plan.turns[0].text, timestamp: now }],
@@ -56,6 +60,7 @@ export async function POST(request: Request) {
         id: interview.id,
         goal: plan.goal,
         interviewerPersona: interview.interviewerPersona,
+        language: interview.language,
         plannedTurns: plan.turns,
         expectedSignals: plan.expected_signals,
         transcript: interview.transcript,

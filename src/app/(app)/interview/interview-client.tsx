@@ -32,10 +32,14 @@ type StartResult = {
   id: string;
   goal: string;
   interviewerPersona: string;
+  language: string | null;
   plannedTurns: PlannedTurn[];
   expectedSignals: string[];
   transcript: Turn[];
 };
+
+// Fallback interview languages when the project has defined no language-type contexts.
+const DEFAULT_LANGUAGES = ["zh", "en", "sv"];
 
 type UpdateProposal = {
   summary?: string;
@@ -72,13 +76,23 @@ export function InterviewClient({
   hasModel: boolean;
 }) {
   const router = useRouter();
+  // Language the interview is CONDUCTED in. Options come from the project's language-type
+  // contexts (so the user picks among languages they've defined); fall back to a built-in
+  // list. This is the interview's OWN language, independent of UI locale.
+  const languageOptions = (() => {
+    const fromContexts = contexts.filter((c) => c.type === "language").map((c) => c.name);
+    return fromContexts.length > 0 ? fromContexts : DEFAULT_LANGUAGES;
+  })();
+
   const [type, setType] = useState(interviewTypes[0] ?? "relationship");
   const [persona, setPersona] = useState(PERSONA_SUGGESTIONS[0]);
   const [goal, setGoal] = useState("");
+  const [language, setLanguage] = useState(languageOptions[0] ?? "");
   const [selectedContexts, setSelectedContexts] = useState<string[]>([]);
 
   const [interviewId, setInterviewId] = useState<string | null>(null);
   const [interviewGoal, setInterviewGoal] = useState<string>("");
+  const [interviewLanguage, setInterviewLanguage] = useState<string | null>(null);
   const [plannedTurns, setPlannedTurns] = useState<PlannedTurn[]>([]);
   const [expectedSignals, setExpectedSignals] = useState<string[]>([]);
   const [transcript, setTranscript] = useState<Turn[]>([]);
@@ -111,6 +125,7 @@ export function InterviewClient({
           type,
           interviewerPersona: persona,
           targetContextIds: selectedContexts,
+          language: language.trim() || undefined,
           goal: goal || undefined,
         }),
       });
@@ -118,6 +133,7 @@ export function InterviewClient({
       const data = (await res.json()) as StartResult;
       setInterviewId(data.id);
       setInterviewGoal(data.goal);
+      setInterviewLanguage(data.language);
       setPlannedTurns(data.plannedTurns);
       setExpectedSignals(data.expectedSignals ?? []);
       setTranscript(data.transcript);
@@ -199,6 +215,7 @@ export function InterviewClient({
   function reset() {
     setInterviewId(null);
     setInterviewGoal("");
+    setInterviewLanguage(null);
     setPlannedTurns([]);
     setExpectedSignals([]);
     setTranscript([]);
@@ -244,6 +261,22 @@ export function InterviewClient({
             </datalist>
           </label>
         </div>
+
+        <label className="block text-sm sm:max-w-xs">
+          <span className="mb-1 block text-neutral-500">Interview language (the language the interview is conducted in)</span>
+          <input
+            className={inputCls}
+            list="interview-language-options"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            placeholder="e.g. zh, en, sv"
+          />
+          <datalist id="interview-language-options">
+            {languageOptions.map((l) => (
+              <option key={l} value={l} />
+            ))}
+          </datalist>
+        </label>
 
         <label className="block text-sm">
           <span className="mb-1 block text-neutral-500">Goal (optional — planner derives one if blank)</span>
@@ -300,7 +333,10 @@ export function InterviewClient({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-medium">{interviewGoal}</h2>
-            <p className="text-xs text-neutral-400">Persona: {persona} · {type}</p>
+            <p className="text-xs text-neutral-400">
+              Persona: {persona} · {type}
+              {interviewLanguage ? ` · ${interviewLanguage}` : ""}
+            </p>
           </div>
           <button className={btnSecondary} onClick={reset} disabled={busy !== null}>
             New interview

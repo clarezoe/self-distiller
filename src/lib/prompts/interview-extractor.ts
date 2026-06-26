@@ -11,6 +11,8 @@ export const INTERVIEW_EXTRACTION_SCHEMA: JsonSchema = {
   type: "object",
   properties: {
     summary: { type: "string" },
+    // Language the interview was conducted in (echoed back so the report records it).
+    language: { type: "string" },
     explicit_facts: { type: "array", items: { type: "string" } },
     preferences: { type: "array", items: { type: "string" } },
     tone_patterns: { type: "array", items: { type: "string" } },
@@ -74,6 +76,7 @@ export type InterviewUpdateProposal = {
 
 export type InterviewExtractionResult = {
   summary: string;
+  language?: string;
   explicit_facts?: string[];
   preferences?: string[];
   tone_patterns: string[];
@@ -123,6 +126,8 @@ export function buildInterviewExtractorMessages(input: {
   type: string;
   targetContexts?: string[];
   transcript: Array<{ speaker: string; text: string }>;
+  // Language the interview was CONDUCTED in. Independent of UI locale; may be unset for old interviews.
+  language?: string;
 }): LlmMessage[] {
   const transcriptBlock = input.transcript
     .map((t) => `${t.speaker === "user" ? "USER" : "INTERVIEWER"}: ${t.text}`)
@@ -133,6 +138,11 @@ export function buildInterviewExtractorMessages(input: {
       ? `Target context(s): ${input.targetContexts.join(", ")}`
       : "Target context: not specified.";
 
+  const language = input.language?.trim();
+  const languageLine = language
+    ? `Interview language: ${language}. The interview was conducted in ${language}; attribute language-specific patterns to ${language} (e.g. nest language patterns under language_models.${language}), and set the report's "language" field to ${language}.`
+    : `Interview language: not specified — attribute language-specific patterns to the user's language generally.`;
+
   return [
     { role: "system", content: SYSTEM },
     {
@@ -141,6 +151,7 @@ export function buildInterviewExtractorMessages(input: {
         `Interview type: ${input.type}`,
         `Interview goal: ${input.goal}`,
         `Interviewer persona: ${input.interviewerPersona}`,
+        languageLine,
         contextLine,
         "",
         "Transcript:",

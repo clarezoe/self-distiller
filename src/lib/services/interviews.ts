@@ -40,6 +40,7 @@ export async function createInterview(
     type: InterviewType;
     interviewerPersona: string;
     targetContextIds?: string[];
+    language?: string;
     goal: string;
     transcript?: TranscriptTurn[];
   },
@@ -50,6 +51,7 @@ export async function createInterview(
       type: data.type,
       interviewerPersona: data.interviewerPersona,
       targetContextIds: data.targetContextIds ?? [],
+      language: data.language ?? null,
       goal: data.goal,
       transcript: (data.transcript ?? []) as object,
     },

@@ -1,0 +1,3 @@
+{"file": "docs/self_distiller_prd_en.md", "reason": "§13.2 planner, §13.3 extractor, §14.3 extraction prompt, §12 language_models — language shapes the persona"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend conventions: service layering, runAgent schema, zod, migration, DoD"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Frontend conventions: interview client setup UI, selector pattern"}
