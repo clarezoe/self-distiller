@@ -26,10 +26,11 @@
   "login": {
     "title": "自我蒸馏器",
     "subtitle": "登录到你的工作区。",
-    "invalid": "邮箱或密码不正确。",
+    "invalid": "该邮箱无法登录，或登录链接发送失败。",
     "email": "邮箱",
-    "password": "密码",
-    "signIn": "登录"
+    "sendLink": "发送登录链接",
+    "checkEmail": "请查收邮箱中的登录链接。",
+    "magicHint": "我们会给你发送一次性魔法登录链接，无需密码。"
   },
   "dashboard": {
     "title": "概览",

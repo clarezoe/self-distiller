@@ -1,35 +1,56 @@
 import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
+import Nodemailer from "next-auth/providers/nodemailer";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import bcrypt from "bcryptjs";
+import { createTransport } from "nodemailer";
 import { prisma } from "@/lib/db";
 import { authConfig } from "@/lib/auth.config";
+import { isAllowedEmail } from "@/lib/allowlist";
 
-// Full config (Node runtime): adapter + Credentials provider with DB access.
+// Full config (Node runtime): Prisma adapter + email magic-link provider.
+// Password (Credentials) login was removed in GitHub #9 — sign-in is now an
+// allowlisted Nodemailer magic link only.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
   providers: [
-    Credentials({
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+    Nodemailer({
+      server: {
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT ?? 587),
+        secure: process.env.SMTP_SECURE === "true",
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
       },
-      authorize: async (credentials) => {
-        const email = credentials?.email as string | undefined;
-        const password = credentials?.password as string | undefined;
-        if (!email || !password) return null;
-
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user?.passwordHash) return null;
-
-        const ok = await bcrypt.compare(password, user.passwordHash);
-        if (!ok) return null;
-
-        return { id: user.id, email: user.email, name: user.name, role: user.role };
+      from: process.env.SMTP_FROM,
+      // Dev / SMTP-unset fallback: log the magic URL to the server console so
+      // local login never needs a real mailbox (avoids dev lockout). When
+      // SMTP_HOST is set, send a real email via nodemailer.
+      async sendVerificationRequest({ identifier, url, provider }) {
+        if (!process.env.SMTP_HOST) {
+          console.log(`\n[auth] Magic sign-in link for ${identifier}:\n${url}\n`);
+          return;
+        }
+        const transport = createTransport(provider.server);
+        const { host } = new URL(url);
+        await transport.sendMail({
+          to: identifier,
+          from: provider.from,
+          subject: `Sign in to ${host}`,
+          text: `Sign in to ${host}\n${url}\n\nIf you did not request this, you can ignore this email.`,
+          html: `<p>Sign in to <strong>${host}</strong></p><p><a href="${url}">Click here to sign in</a></p><p>If you did not request this, you can ignore this email.</p>`,
+        });
       },
     }),
   ],
+  callbacks: {
+    ...authConfig.callbacks,
+    // Allowlist gate: only configured addresses may sign in (case-insensitive).
+    signIn({ user }) {
+      return isAllowedEmail(user.email, process.env.AUTH_ALLOWLIST);
+    },
+  },
 });
 
 export async function getCurrentUser() {

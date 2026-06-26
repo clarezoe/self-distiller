@@ -1,5 +1,4 @@
 import "dotenv/config";
-import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
@@ -8,14 +7,14 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const email = process.env.OWNER_EMAIL ?? "owner@distill.me";
-  const password = process.env.OWNER_PASSWORD ?? "change-me";
-  const passwordHash = await bcrypt.hash(password, 10);
+  // Magic-link auth (GitHub #9): no password needed. Owner is the allowlisted
+  // address that owns all migrated data.
+  const email = process.env.OWNER_EMAIL ?? "clarezoe@gmx.com";
 
   const user = await prisma.user.upsert({
     where: { email },
-    update: { passwordHash, role: "owner" },
-    create: { email, name: "Owner", passwordHash, role: "owner" },
+    update: { role: "owner" },
+    create: { email, name: "Owner", role: "owner" },
   });
 
   await prisma.llmSettings.upsert({

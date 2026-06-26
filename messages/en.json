@@ -26,10 +26,11 @@
   "login": {
     "title": "Self Distiller",
     "subtitle": "Sign in to your workspace.",
-    "invalid": "Invalid email or password.",
+    "invalid": "That email can’t sign in here, or the link couldn’t be sent.",
     "email": "Email",
-    "password": "Password",
-    "signIn": "Sign in"
+    "sendLink": "Send sign-in link",
+    "checkEmail": "Check your email for a sign-in link.",
+    "magicHint": "We’ll email you a one-time magic link — no password needed."
   },
   "dashboard": {
     "title": "Dashboard",
