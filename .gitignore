@@ -17,6 +17,10 @@
 /.next/
 /out/
 
+# serwist-generated service worker (build artifact)
+/public/sw.js
+/public/sw.js.map
+
 # production
 /build
 

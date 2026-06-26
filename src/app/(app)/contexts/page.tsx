@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
 import { createProject, getActiveProject, getProjectForUser } from "@/lib/services/projects";
 import {
@@ -19,6 +20,8 @@ export default async function ContextsPage() {
   const user = await getCurrentUser();
   if (!user) return null;
   const userId = user.id;
+  const t = await getTranslations("contexts");
+  const tCommon = await getTranslations("common");
   const project = await getActiveProject(userId);
 
   if (!project) {
@@ -32,11 +35,11 @@ export default async function ContextsPage() {
     }
     return (
       <div className="max-w-md space-y-4">
-        <h1 className="text-2xl font-semibold">Create your project</h1>
+        <h1 className="text-2xl font-semibold">{t("createProject")}</h1>
         <form action={makeProject} className="space-y-3">
-          <input name="name" placeholder="Project name" className={inputCls} required />
-          <input name="goal" placeholder="Main goal" className={inputCls} required />
-          <button type="submit" className={btnCls}>Create project</button>
+          <input name="name" placeholder={t("projectNamePlaceholder")} className={inputCls} required />
+          <input name="goal" placeholder={t("goalPlaceholder")} className={inputCls} required />
+          <button type="submit" className={btnCls}>{t("createProjectButton")}</button>
         </form>
       </div>
     );
@@ -80,29 +83,29 @@ export default async function ContextsPage() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-2xl font-semibold">Contexts</h1>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
         <p className="text-sm text-neutral-500">{project.name}</p>
       </header>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-          <h2 className="font-medium">Add a context</h2>
+          <h2 className="font-medium">{t("addContext")}</h2>
           <form action={addContext} className="space-y-3">
             <select name="type" className={inputCls} defaultValue="language">
-              {CONTEXT_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+              {CONTEXT_TYPES.map((ct) => (
+                <option key={ct} value={ct}>{ct}</option>
               ))}
             </select>
-            <input name="name" placeholder="Name (e.g. Chinese, Close friend, Comforting)" className={inputCls} required />
-            <input name="description" placeholder="Description (optional)" className={inputCls} />
-            <button type="submit" className={btnCls}>Add context</button>
+            <input name="name" placeholder={t("namePlaceholder")} className={inputCls} required />
+            <input name="description" placeholder={t("descriptionPlaceholder")} className={inputCls} />
+            <button type="submit" className={btnCls}>{t("addContextButton")}</button>
           </form>
         </div>
 
         <div className="space-y-3 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-          <h2 className="font-medium">Contexts ({contexts.length})</h2>
+          <h2 className="font-medium">{t("contextsCount", { count: contexts.length })}</h2>
           {contexts.length === 0 ? (
-            <p className="text-sm text-neutral-500">None yet.</p>
+            <p className="text-sm text-neutral-500">{tCommon("none")}</p>
           ) : (
             <ul className="space-y-1 text-sm">
               {contexts.map((c) => (
@@ -120,9 +123,9 @@ export default async function ContextsPage() {
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-          <h2 className="font-medium">Build a combination</h2>
+          <h2 className="font-medium">{t("buildCombination")}</h2>
           <form action={addCombination} className="space-y-3">
-            <input name="name" placeholder="Combination name" className={inputCls} required />
+            <input name="name" placeholder={t("combinationNamePlaceholder")} className={inputCls} required />
             {(
               [
                 ["languageContextId", "language"],
@@ -132,20 +135,20 @@ export default async function ContextsPage() {
               ] as const
             ).map(([field, type]) => (
               <select key={field} name={field} className={inputCls} defaultValue="">
-                <option value="">— {type} (optional) —</option>
+                <option value="">{t("optionLabel", { type })}</option>
                 {byType(type).map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             ))}
-            <button type="submit" className={btnCls}>Create combination</button>
+            <button type="submit" className={btnCls}>{t("createCombination")}</button>
           </form>
         </div>
 
         <div className="space-y-3 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-          <h2 className="font-medium">Combinations ({combinations.length})</h2>
+          <h2 className="font-medium">{t("combinationsCount", { count: combinations.length })}</h2>
           {combinations.length === 0 ? (
-            <p className="text-sm text-neutral-500">None yet.</p>
+            <p className="text-sm text-neutral-500">{tCommon("none")}</p>
           ) : (
             <ul className="space-y-1 text-sm">
               {combinations.map((c) => (

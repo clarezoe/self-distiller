@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
 import { PROVIDER_OPTIONS, runAgent, type Provider } from "@/lib/llm";
 import {
@@ -9,6 +10,7 @@ import {
   upsertCredential,
 } from "@/lib/services/settings";
 import { SubmitButton } from "@/components/submit-button";
+import { AppearanceSettings } from "@/components/appearance-settings";
 
 const inputCls =
   "w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-950";
@@ -25,6 +27,7 @@ export default async function SettingsPage({
   const user = await getCurrentUser();
   if (!user) return null;
   const userId = user.id;
+  const t = await getTranslations("settings");
 
   const { test, saved } = await searchParams;
   const [settings, creds] = await Promise.all([
@@ -73,7 +76,7 @@ export default async function SettingsPage({
           },
         },
       });
-      message = res.parsed?.ok ? "ok" : "Call succeeded but output was not schema-valid";
+      message = res.parsed?.ok ? "ok" : "Call succeeded but output was not schema-valid"; // sentinel, not shown raw
     } catch (e) {
       message = e instanceof Error ? e.message : "Unknown error";
     }
@@ -83,18 +86,20 @@ export default async function SettingsPage({
   return (
     <div className="max-w-2xl space-y-8">
       <header>
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-sm text-neutral-500">LLM provider, model, and credentials.</p>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
+        <p className="text-sm text-neutral-500">{t("subtitle")}</p>
       </header>
 
       {saved ? (
         <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950/40">
-          Saved.
+          {t("saved")}
         </p>
       ) : null}
 
+      <AppearanceSettings />
+
       <section className="space-y-4 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-        <h2 className="font-medium">Default provider &amp; model</h2>
+        <h2 className="font-medium">{t("defaultSection")}</h2>
         <form action={saveSettings} className="space-y-3">
           <select name="defaultProvider" className={inputCls} defaultValue={settings?.defaultProvider ?? "openai_compatible"}>
             {PROVIDER_OPTIONS.map((p) => (
@@ -105,28 +110,28 @@ export default async function SettingsPage({
           </select>
           <input
             name="defaultModel"
-            placeholder="Default model (e.g. gpt-4o-mini, claude-sonnet-4-6)"
+            placeholder={t("modelPlaceholder")}
             defaultValue={settings?.defaultModel ?? ""}
             className={inputCls}
           />
-          <SubmitButton className={btnCls} pendingText="Saving…">Save settings</SubmitButton>
+          <SubmitButton className={btnCls} pendingText={t("saving")}>{t("saveSettings")}</SubmitButton>
         </form>
       </section>
 
       <section className="space-y-4 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-        <h2 className="font-medium">Credentials</h2>
+        <h2 className="font-medium">{t("credentials")}</h2>
         {creds.length > 0 ? (
           <ul className="space-y-1 text-sm">
             {creds.map((c) => (
               <li key={c.id} className="flex items-center gap-2">
                 <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs dark:bg-neutral-800">{c.provider}</span>
-                <span className="text-neutral-500">{c.baseUrl ?? "default endpoint"}</span>
-                <span className="text-xs text-green-600">key stored (encrypted)</span>
+                <span className="text-neutral-500">{c.baseUrl ?? t("defaultEndpoint")}</span>
+                <span className="text-xs text-green-600">{t("keyStored")}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-neutral-500">No credentials yet.</p>
+          <p className="text-sm text-neutral-500">{t("noCredentials")}</p>
         )}
 
         <form action={saveCredential} className="space-y-3 border-t border-neutral-200 pt-4 dark:border-neutral-800">
@@ -135,19 +140,17 @@ export default async function SettingsPage({
               <option key={p.value} value={p.value}>{p.label}</option>
             ))}
           </select>
-          <input name="baseUrl" placeholder="Base URL (OpenAI-compatible only, optional)" className={inputCls} />
-          <input name="apiKey" type="password" placeholder="API key" className={inputCls} required autoComplete="off" />
-          <SubmitButton className={btnCls} pendingText="Saving…">Save credential</SubmitButton>
+          <input name="baseUrl" placeholder={t("baseUrlPlaceholder")} className={inputCls} />
+          <input name="apiKey" type="password" placeholder={t("apiKeyPlaceholder")} className={inputCls} required autoComplete="off" />
+          <SubmitButton className={btnCls} pendingText={t("saving")}>{t("saveCredential")}</SubmitButton>
         </form>
       </section>
 
       <section className="space-y-3 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-        <h2 className="font-medium">Test connection</h2>
-        <p className="text-sm text-neutral-500">
-          Makes one real structured LLM call using your default provider and a saved credential.
-        </p>
+        <h2 className="font-medium">{t("testConnection")}</h2>
+        <p className="text-sm text-neutral-500">{t("testDescription")}</p>
         <form action={testConnection}>
-          <SubmitButton className={btnCls} pendingText="Testing… (a few seconds)">Run test</SubmitButton>
+          <SubmitButton className={btnCls} pendingText={t("testing")}>{t("runTest")}</SubmitButton>
         </form>
         {test ? (
           <p
@@ -157,9 +160,7 @@ export default async function SettingsPage({
                 : "bg-red-50 text-red-700 dark:bg-red-950/40"
             }`}
           >
-            {test === "ok"
-              ? "✓ Success — structured LLM call returned valid JSON."
-              : `✗ Failed: ${test}`}
+            {test === "ok" ? t("testSuccess") : t("testFailed", { message: test })}
           </p>
         ) : null}
       </section>

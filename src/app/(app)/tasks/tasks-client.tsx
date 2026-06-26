@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 const inputCls =
   "w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-950";
@@ -26,22 +27,23 @@ type GeneratedTask = {
   createdAt: string;
 };
 
-// §6.5 labels surfaced as toggles.
-const LABELS: { value: string; label: string }[] = [
-  { value: "sounds_like_me", label: "Sounds like me" },
-  { value: "not_like_me", label: "Doesn't sound like me" },
-  { value: "too_long", label: "Too long" },
-  { value: "too_short", label: "Too short" },
-  { value: "too_soft", label: "Too soft" },
-  { value: "too_harsh", label: "Too harsh" },
-  { value: "too_ai_like", label: "Too AI-like" },
-  { value: "language_too_perfect", label: "Language too perfect" },
-  { value: "too_many_preserved_mistakes", label: "Too many preserved mistakes" },
-  { value: "too_corrected", label: "Too corrected" },
-  { value: "wrong_relationship_tone", label: "Wrong relationship tone" },
-  { value: "wrong_emotional_tone", label: "Wrong emotional tone" },
-  { value: "wrong_intention", label: "Wrong intention" },
-];
+// §6.5 feedback label keys surfaced as toggles; display text comes from
+// the `tasks.labels` namespace.
+const LABEL_KEYS = [
+  "sounds_like_me",
+  "not_like_me",
+  "too_long",
+  "too_short",
+  "too_soft",
+  "too_harsh",
+  "too_ai_like",
+  "language_too_perfect",
+  "too_many_preserved_mistakes",
+  "too_corrected",
+  "wrong_relationship_tone",
+  "wrong_emotional_tone",
+  "wrong_intention",
+] as const;
 
 const DIMENSION_ORDER = ["language", "role", "relationship", "scene"] as const;
 
@@ -57,6 +59,8 @@ export function TasksClient({
   hasModel: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("tasks");
+  const tCommon = useTranslations("common");
   const [taskType, setTaskType] = useState(taskTypes[0]?.value ?? "chat_reply");
   const [input, setInput] = useState("");
   const [selected, setSelected] = useState<Record<string, string>>({});
@@ -99,7 +103,7 @@ export function TasksClient({
           mode: "draft",
         }),
       });
-      if (!res.ok) throw new Error(await readError(res, "Failed to generate draft"));
+      if (!res.ok) throw new Error(await readError(res, t("errFailedGenerate")));
       const data = (await res.json()) as GeneratedTask;
       setTask(data);
       // reset feedback for the new draft
@@ -109,7 +113,7 @@ export function TasksClient({
       setComments("");
       setSaveSample(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(e instanceof Error ? e.message : tCommon("somethingWrong"));
     } finally {
       setBusy(null);
     }
@@ -133,16 +137,14 @@ export function TasksClient({
           save_as_training_sample: saveSample,
         }),
       });
-      if (!res.ok) throw new Error(await readError(res, "Failed to record feedback"));
+      if (!res.ok) throw new Error(await readError(res, t("errFailedFeedback")));
       const data = (await res.json()) as { trainingSampleId: string | null };
       setFeedbackDone(
-        data.trainingSampleId
-          ? "Feedback saved. Output stored as a training sample."
-          : "Feedback saved.",
+        data.trainingSampleId ? t("feedbackSavedSample") : t("feedbackSaved"),
       );
       startTransition(() => router.refresh());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(e instanceof Error ? e.message : tCommon("somethingWrong"));
     } finally {
       setBusy(null);
     }
@@ -160,24 +162,24 @@ export function TasksClient({
   if (!task) {
     return (
       <section className="space-y-4 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-        <h2 className="font-medium">New draft</h2>
+        <h2 className="font-medium">{t("newDraft")}</h2>
         {!hasModel ? (
           <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-950/40">
-            No Self Model yet — drafts will be generic until you generate v0.1 (Import) and train it.
+            {t("noModelWarning")}
           </p>
         ) : null}
 
         <label className="block text-sm">
-          <span className="mb-1 block text-neutral-500">Task type</span>
+          <span className="mb-1 block text-neutral-500">{t("taskType")}</span>
           <select className={inputCls} value={taskType} onChange={(e) => setTaskType(e.target.value)}>
-            {taskTypes.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
+            {taskTypes.map((tt) => (
+              <option key={tt.value} value={tt.value}>{tt.label}</option>
             ))}
           </select>
         </label>
 
         <div className="space-y-2">
-          <span className="block text-sm text-neutral-500">Context (manual selection)</span>
+          <span className="block text-sm text-neutral-500">{t("contextManual")}</span>
           <div className="grid gap-2 sm:grid-cols-2">
             {DIMENSION_ORDER.map((type) => (
               <label key={type} className="block text-sm">
@@ -187,7 +189,7 @@ export function TasksClient({
                   value={selected[type] ?? ""}
                   onChange={(e) => pick(type, e.target.value)}
                 >
-                  <option value="">— {type} (optional) —</option>
+                  <option value="">{t("contextOptionLabel", { type })}</option>
                   {contextsByType(type).map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -198,18 +200,18 @@ export function TasksClient({
         </div>
 
         <label className="block text-sm">
-          <span className="mb-1 block text-neutral-500">Task input</span>
+          <span className="mb-1 block text-neutral-500">{t("taskInput")}</span>
           <textarea
             className={`${inputCls} min-h-28`}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="e.g. A friend says: I really feel like a failure lately."
+            placeholder={t("inputPlaceholder")}
           />
         </label>
 
         <div className="flex items-center gap-2 text-xs text-neutral-400">
-          <span className="rounded bg-neutral-100 px-1.5 py-0.5 dark:bg-neutral-800">Mode: Draft</span>
-          <span>Drafts only — nothing is ever sent for you.</span>
+          <span className="rounded bg-neutral-100 px-1.5 py-0.5 dark:bg-neutral-800">{t("modeDraft")}</span>
+          <span>{t("draftsOnly")}</span>
         </div>
 
         {error ? (
@@ -217,7 +219,7 @@ export function TasksClient({
         ) : null}
 
         <button className={btnCls} onClick={generate} disabled={busy !== null || !input.trim()}>
-          {busy === "generate" ? "Generating draft…" : "Generate draft"}
+          {busy === "generate" ? t("generating") : t("generateDraft")}
         </button>
       </section>
     );
@@ -229,15 +231,15 @@ export function TasksClient({
     <div className="space-y-6">
       <section className="space-y-4 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
         <div className="flex items-start justify-between gap-3">
-          <h2 className="font-medium">Draft</h2>
+          <h2 className="font-medium">{t("draft")}</h2>
           <button className={btnSecondary} onClick={reset} disabled={busy !== null}>
-            New draft
+            {t("newDraftButton")}
           </button>
         </div>
 
         {blocked ? (
           <div className="space-y-2 rounded-lg border border-red-300 bg-red-50 p-4 text-sm dark:border-red-800 dark:bg-red-950/40">
-            <p className="font-medium text-red-700 dark:text-red-300">Sensitive topic — please take over</p>
+            <p className="font-medium text-red-700 dark:text-red-300">{t("sensitiveTopic")}</p>
             <p className="text-red-700 dark:text-red-300">{task.boundaryWarning?.message}</p>
             {task.boundaryWarning?.reason ? (
               <p className="text-xs text-red-600 dark:text-red-400">
@@ -245,7 +247,7 @@ export function TasksClient({
               </p>
             ) : null}
             <p className="text-xs text-red-600 dark:text-red-400">
-              No send-ready draft is shown. Write this reply yourself.
+              {t("noSendReady")}
             </p>
           </div>
         ) : (
@@ -261,7 +263,7 @@ export function TasksClient({
               {task.output}
             </div>
             <p className="text-xs text-neutral-400">
-              Draft only — review and send it yourself. The system never sends on your behalf.
+              {t("reviewSendYourself")}
             </p>
           </>
         )}
@@ -269,28 +271,28 @@ export function TasksClient({
 
       {blocked ? null : (
       <section className="space-y-4 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-        <h2 className="font-medium">Feedback</h2>
+        <h2 className="font-medium">{t("feedback")}</h2>
 
         <div className="flex flex-wrap gap-2">
-          {LABELS.map((l) => (
+          {LABEL_KEYS.map((key) => (
             <button
-              key={l.value}
+              key={key}
               type="button"
-              onClick={() => toggleLabel(l.value)}
+              onClick={() => toggleLabel(key)}
               className={
-                labels.includes(l.value)
+                labels.includes(key)
                   ? "rounded-full bg-neutral-900 px-3 py-1 text-xs text-white dark:bg-white dark:text-neutral-900"
                   : "rounded-full border border-neutral-300 px-3 py-1 text-xs hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900"
               }
             >
-              {l.label}
+              {t(`labels.${key}`)}
             </button>
           ))}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm">
-            <span className="mb-1 block text-neutral-500">Likeness (1-5)</span>
+            <span className="mb-1 block text-neutral-500">{t("likeness")}</span>
             <select
               className={inputCls}
               value={likeness}
@@ -303,7 +305,7 @@ export function TasksClient({
             </select>
           </label>
           <label className="block text-sm">
-            <span className="mb-1 block text-neutral-500">Usefulness (1-5)</span>
+            <span className="mb-1 block text-neutral-500">{t("usefulness")}</span>
             <select
               className={inputCls}
               value={usefulness}
@@ -318,7 +320,7 @@ export function TasksClient({
         </div>
 
         <label className="block text-sm">
-          <span className="mb-1 block text-neutral-500">Comments (optional)</span>
+          <span className="mb-1 block text-neutral-500">{t("comments")}</span>
           <textarea
             className={`${inputCls} min-h-20`}
             value={comments}
@@ -328,7 +330,7 @@ export function TasksClient({
 
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={saveSample} onChange={(e) => setSaveSample(e.target.checked)} />
-          <span>Save this output as a training sample</span>
+          <span>{t("saveSample")}</span>
         </label>
 
         {error ? (
@@ -339,7 +341,7 @@ export function TasksClient({
         ) : null}
 
         <button className={btnCls} onClick={sendFeedback} disabled={busy !== null}>
-          {busy === "feedback" ? "Saving…" : "Save feedback"}
+          {busy === "feedback" ? t("savingFeedback") : t("saveFeedback")}
         </button>
       </section>
       )}

@@ -1,10 +1,9 @@
+import { getTranslations } from "next-intl/server";
 import { Placeholder } from "@/components/placeholder";
 
-export default function VersionsPage() {
+export default async function VersionsPage() {
+  const t = await getTranslations("versions");
   return (
-    <Placeholder
-      title="Versions"
-      note="Self Model version history: reason for each update, affected scope, evidence, approval status, and rollback."
-    />
+    <Placeholder title={t("title")} note={t("note")} comingSoon={t("comingSoon")} />
   );
 }

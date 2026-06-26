@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
+  const t = await getTranslations("dashboard");
 
   const project = await prisma.project.findFirst({
     where: { userId: user.id },
@@ -25,10 +27,10 @@ export default async function DashboardPage() {
     : null;
 
   const cards = [
-    { label: "Contexts", value: stats?.[0] ?? 0 },
-    { label: "Materials", value: stats?.[1] ?? 0 },
-    { label: "Interviews", value: stats?.[2] ?? 0 },
-    { label: "Calibrations", value: stats?.[3] ?? 0 },
+    { label: t("cards.contexts"), value: stats?.[0] ?? 0 },
+    { label: t("cards.materials"), value: stats?.[1] ?? 0 },
+    { label: t("cards.interviews"), value: stats?.[2] ?? 0 },
+    { label: t("cards.calibrations"), value: stats?.[3] ?? 0 },
   ];
   const activeVersion = stats?.[4]?.version ?? "—";
 
@@ -36,16 +38,19 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <h1 className="text-2xl font-semibold">{t("title")}</h1>
           <p className="text-sm text-neutral-500">
-            {project ? project.name : "No project yet"} · Self Model version {activeVersion}
+            {t("subtitle", {
+              project: project ? project.name : t("noProject"),
+              version: activeVersion,
+            })}
           </p>
         </div>
         <Link
           href="/contexts"
           className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
         >
-          Manage contexts
+          {t("manageContexts")}
         </Link>
       </header>
 
@@ -63,7 +68,7 @@ export default async function DashboardPage() {
 
       {!project ? (
         <p className="text-sm text-neutral-500">
-          No project found. Run <code>pnpm db:seed</code> or create one.
+          {t.rich("noProjectFound", { code: (chunks) => <code>{chunks}</code> })}
         </p>
       ) : null}
     </div>

@@ -1,8 +1,15 @@
+import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveProject } from "@/lib/services/projects";
 import { listEvidence } from "@/lib/services/evidence";
 import { getActiveModel, modelRowToJson } from "@/lib/self-model/version";
-import { JsonValue, isEmptyValue, humanizeKey, type EvidenceMap } from "./json-view";
+import {
+  JsonValue,
+  isEmptyValue,
+  humanizeKey,
+  setJsonViewLabels,
+  type EvidenceMap,
+} from "./json-view";
 
 const linkBtn =
   "rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900";
@@ -65,13 +72,14 @@ function MapSection({
 export default async function SelfModelPage() {
   const user = await getCurrentUser();
   if (!user) return null;
+  const t = await getTranslations("selfModel");
 
   const project = await getActiveProject(user.id);
   if (!project) {
     return (
       <div className="max-w-md space-y-3">
-        <h1 className="text-2xl font-semibold">Self Model</h1>
-        <p className="text-sm text-neutral-500">Create a project first, then import materials to generate a model.</p>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
+        <p className="text-sm text-neutral-500">{t("createProjectFirst")}</p>
       </div>
     );
   }
@@ -80,13 +88,21 @@ export default async function SelfModelPage() {
   if (!row) {
     return (
       <div className="max-w-md space-y-3">
-        <h1 className="text-2xl font-semibold">Self Model</h1>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
         <p className="text-sm text-neutral-500">
-          No Self Model yet. Go to <span className="font-medium">Import</span>, add materials, accept extracted evidence, and generate v0.1.
+          {t.rich("noModel", { b: (chunks) => <span className="font-medium">{chunks}</span> })}
         </p>
       </div>
     );
   }
+
+  // Inject locale-aware labels into the pure JSON renderer for this request.
+  setJsonViewLabels({
+    evidence: t("evidence"),
+    confidence: t("confidence", { value: "" }).trim(),
+    yes: t("yes"),
+    no: t("no"),
+  });
 
   const model = modelRowToJson(row);
   const evidence = await listEvidence(project.id);
@@ -97,46 +113,46 @@ export default async function SelfModelPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Self Model v{model.version}</h1>
-          <p className="text-sm text-neutral-500">{project.name} · active version</p>
+          <h1 className="text-2xl font-semibold">{t("headerTitle", { version: model.version })}</h1>
+          <p className="text-sm text-neutral-500">{t("activeVersion", { project: project.name })}</p>
         </div>
         <div className="flex gap-2">
-          <a className={linkBtn} href={`${exportBase}&format=markdown`}>Export Markdown</a>
-          <a className={linkBtn} href={`${exportBase}&format=json`}>Export JSON</a>
+          <a className={linkBtn} href={`${exportBase}&format=markdown`}>{t("exportMarkdown")}</a>
+          <a className={linkBtn} href={`${exportBase}&format=json`}>{t("exportJson")}</a>
         </div>
       </header>
 
       <ValueSection
-        title="Core Self"
+        title={t("coreSelf")}
         value={model.core_self}
         map={evidenceById}
-        empty="No core self captured yet."
+        empty={t("coreSelfEmpty")}
       />
 
-      <MapSection title="Language Models" record={model.language_models} map={evidenceById} />
-      <MapSection title="Role Models" record={model.role_models} map={evidenceById} />
-      <MapSection title="Relationship Models" record={model.relationship_models} map={evidenceById} />
-      <MapSection title="Scene Models" record={model.scene_models} map={evidenceById} />
+      <MapSection title={t("languageModels")} record={model.language_models} map={evidenceById} />
+      <MapSection title={t("roleModels")} record={model.role_models} map={evidenceById} />
+      <MapSection title={t("relationshipModels")} record={model.relationship_models} map={evidenceById} />
+      <MapSection title={t("sceneModels")} record={model.scene_models} map={evidenceById} />
 
       {!isEmptyValue(model.current_state) ? (
         <ValueSection
-          title="Current State"
+          title={t("currentState")}
           value={model.current_state}
           map={evidenceById}
-          empty="Nothing recorded."
+          empty={t("currentStateEmpty")}
         />
       ) : null}
 
       <ValueSection
-        title="Boundaries"
+        title={t("boundaries")}
         value={model.boundaries}
         map={evidenceById}
-        empty="None recorded."
+        empty={t("boundariesEmpty")}
       />
 
       {model.unknowns.length > 0 ? (
         <section className={card}>
-          <h2 className="font-medium">Unknowns</h2>
+          <h2 className="font-medium">{t("unknowns")}</h2>
           <ul className="list-disc space-y-0.5 pl-5 text-sm">
             {model.unknowns.map((u, i) => (
               <li key={i}>{typeof u === "string" ? u : JSON.stringify(u)}</li>

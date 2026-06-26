@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 const inputCls =
   "w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-950";
@@ -59,6 +60,8 @@ export function CalibrationClient({
   hasModel: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("calibration");
+  const tCommon = useTranslations("common");
   const [combinationId, setCombinationId] = useState("");
   const [scenarioInput, setScenarioInput] = useState("");
   const [incomingInput, setIncomingInput] = useState("");
@@ -87,12 +90,12 @@ export function CalibrationClient({
           incomingMessage: incomingInput.trim() || undefined,
         }),
       });
-      if (!res.ok) throw new Error(await readError(res, "Failed to create calibration"));
+      if (!res.ok) throw new Error(await readError(res, t("errFailedCreate")));
       const data = (await res.json()) as ClientCalibration;
       setCal(data);
       setAnswer("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(e instanceof Error ? e.message : tCommon("somethingWrong"));
     } finally {
       setBusy(null);
     }
@@ -108,12 +111,12 @@ export function CalibrationClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userAnswer: answer.trim() }),
       });
-      if (!res.ok) throw new Error(await readError(res, "Comparison failed"));
+      if (!res.ok) throw new Error(await readError(res, t("errComparisonFailed")));
       const data = (await res.json()) as ClientCalibration;
       setCal(data);
       setEditingValues(JSON.stringify(data.updateProposal?.values ?? {}, null, 2));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(e instanceof Error ? e.message : tCommon("somethingWrong"));
     } finally {
       setBusy(null);
     }
@@ -131,7 +134,7 @@ export function CalibrationClient({
         try {
           values = JSON.parse(editingValues ?? "{}");
         } catch {
-          throw new Error("Edited values are not valid JSON.");
+          throw new Error(t("invalidJson"));
         }
         editedProposal = {
           summary: cal.updateProposal?.summary,
@@ -144,16 +147,16 @@ export function CalibrationClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ decision, editedProposal }),
       });
-      if (!res.ok) throw new Error(await readError(res, "Apply failed"));
+      if (!res.ok) throw new Error(await readError(res, t("errApplyFailed")));
       const data = (await res.json()) as { applied: boolean; version?: string };
       setDone(
         data.applied
-          ? `Self Model v${data.version} created from this calibration.`
-          : "Decision recorded. No model change.",
+          ? t("modelCreated", { version: data.version ?? "" })
+          : t("noModelChange"),
       );
       startTransition(() => router.refresh());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(e instanceof Error ? e.message : tCommon("somethingWrong"));
     } finally {
       setBusy(null);
     }
@@ -171,17 +174,17 @@ export function CalibrationClient({
   if (!cal) {
     return (
       <section className="space-y-4 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-        <h2 className="font-medium">New blind calibration</h2>
+        <h2 className="font-medium">{t("newCalibration")}</h2>
         {!hasModel ? (
           <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-950/40">
-            No Self Model yet. The prediction will be generic until you generate v0.1 (Import) and run interviews.
+            {t("noModelWarning")}
           </p>
         ) : null}
 
         <label className="block text-sm">
-          <span className="mb-1 block text-neutral-500">Context combination (optional)</span>
+          <span className="mb-1 block text-neutral-500">{t("contextCombination")}</span>
           <select className={inputCls} value={combinationId} onChange={(e) => setCombinationId(e.target.value)}>
-            <option value="">— general (no combination) —</option>
+            <option value="">{t("generalCombination")}</option>
             {combinations.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -189,22 +192,22 @@ export function CalibrationClient({
         </label>
 
         <label className="block text-sm">
-          <span className="mb-1 block text-neutral-500">Scenario (optional — the system generates one if blank)</span>
+          <span className="mb-1 block text-neutral-500">{t("scenario")}</span>
           <textarea
             className={`${inputCls} min-h-20`}
             value={scenarioInput}
             onChange={(e) => setScenarioInput(e.target.value)}
-            placeholder="e.g. A close friend says they feel like a failure lately."
+            placeholder={t("scenarioPlaceholder")}
           />
         </label>
 
         <label className="block text-sm">
-          <span className="mb-1 block text-neutral-500">Incoming message (optional)</span>
+          <span className="mb-1 block text-neutral-500">{t("incomingMessage")}</span>
           <input
             className={inputCls}
             value={incomingInput}
             onChange={(e) => setIncomingInput(e.target.value)}
-            placeholder="The exact message you'd be replying to (if separate from the scenario)"
+            placeholder={t("incomingPlaceholder")}
           />
         </label>
 
@@ -213,11 +216,9 @@ export function CalibrationClient({
         ) : null}
 
         <button className={btnCls} onClick={create} disabled={busy !== null}>
-          {busy === "create" ? "Generating scenario + hidden answer…" : "Start calibration"}
+          {busy === "create" ? t("generatingScenario") : t("startCalibration")}
         </button>
-        <p className="text-xs text-neutral-400">
-          The agent writes its predicted reply now, but it stays hidden until after you answer.
-        </p>
+        <p className="text-xs text-neutral-400">{t("hiddenNote")}</p>
       </section>
     );
   }
@@ -227,31 +228,30 @@ export function CalibrationClient({
     return (
       <section className="space-y-4 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
         <div className="flex items-start justify-between gap-3">
-          <h2 className="font-medium">Your turn</h2>
+          <h2 className="font-medium">{t("yourTurn")}</h2>
           <button className={btnSecondary} onClick={reset} disabled={busy !== null}>
-            New calibration
+            {t("newCalibrationButton")}
           </button>
         </div>
 
         <div className="rounded-lg bg-neutral-100 px-3 py-2 text-sm dark:bg-neutral-800">
-          <p className="mb-0.5 text-[10px] uppercase tracking-wide opacity-60">Scenario</p>
+          <p className="mb-0.5 text-[10px] uppercase tracking-wide opacity-60">{t("scenarioLabel")}</p>
           {cal.scenario}
         </div>
         {cal.incomingMessage ? (
           <div className="rounded-lg bg-neutral-100 px-3 py-2 text-sm dark:bg-neutral-800">
-            <p className="mb-0.5 text-[10px] uppercase tracking-wide opacity-60">Incoming message</p>
+            <p className="mb-0.5 text-[10px] uppercase tracking-wide opacity-60">{t("incomingLabel")}</p>
             {cal.incomingMessage}
           </div>
         ) : null}
 
         <p className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-950/40">
-          The agent has already written a hidden prediction. Write what you would <em>really</em> reply — it stays
-          blind until you submit.
+          {t.rich("blindNote", { em: (chunks) => <em>{chunks}</em> })}
         </p>
 
         <textarea
           className={`${inputCls} min-h-28`}
-          placeholder="Reply as you really would…"
+          placeholder={t("answerPlaceholder")}
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
         />
@@ -261,7 +261,7 @@ export function CalibrationClient({
         ) : null}
 
         <button className={btnCls} onClick={submitAnswer} disabled={busy !== null || !answer.trim()}>
-          {busy === "submit" ? "Comparing…" : "Submit & reveal comparison"}
+          {busy === "submit" ? t("comparing") : t("submitReveal")}
         </button>
       </section>
     );
@@ -274,24 +274,24 @@ export function CalibrationClient({
     <div className="space-y-6">
       <section className="space-y-4 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
         <div className="flex items-start justify-between gap-3">
-          <h2 className="font-medium">Comparison</h2>
+          <h2 className="font-medium">{t("comparison")}</h2>
           <button className={btnSecondary} onClick={reset} disabled={busy !== null}>
-            New calibration
+            {t("newCalibrationButton")}
           </button>
         </div>
 
         <div className="rounded-lg bg-neutral-100 px-3 py-2 text-sm dark:bg-neutral-800">
-          <p className="mb-0.5 text-[10px] uppercase tracking-wide opacity-60">Scenario</p>
+          <p className="mb-0.5 text-[10px] uppercase tracking-wide opacity-60">{t("scenarioLabel")}</p>
           {cal.scenario}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-neutral-200 px-3 py-2 text-sm dark:border-neutral-700">
-            <p className="mb-0.5 text-[10px] uppercase tracking-wide opacity-60">Agent prediction</p>
+            <p className="mb-0.5 text-[10px] uppercase tracking-wide opacity-60">{t("agentPrediction")}</p>
             {cal.hiddenAgentAnswer}
           </div>
           <div className="rounded-lg border border-neutral-900 px-3 py-2 text-sm dark:border-white">
-            <p className="mb-0.5 text-[10px] uppercase tracking-wide opacity-60">Your real answer</p>
+            <p className="mb-0.5 text-[10px] uppercase tracking-wide opacity-60">{t("yourRealAnswer")}</p>
             {cal.userAnswer}
           </div>
         </div>
@@ -301,19 +301,19 @@ export function CalibrationClient({
         ) : null}
         {report?.scope ? (
           <span className="inline-block rounded bg-neutral-100 px-1.5 py-0.5 text-xs dark:bg-neutral-800">
-            scope: {report.scope}
+            {t("scope", { scope: report.scope })}
           </span>
         ) : null}
 
         {report?.differences && report.differences.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">Differences</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">{t("differences")}</p>
             <ul className="space-y-2 text-sm">
               {report.differences.map((d, i) => (
                 <li key={i} className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
                   <p className="text-xs font-medium text-neutral-500">{d.dimension}</p>
-                  {d.agent ? <p className="text-xs">agent: {d.agent}</p> : null}
-                  {d.user ? <p className="text-xs">you: {d.user}</p> : null}
+                  {d.agent ? <p className="text-xs">{t("agentLine", { text: d.agent })}</p> : null}
+                  {d.user ? <p className="text-xs">{t("youLine", { text: d.user })}</p> : null}
                   <p className="mt-1">{d.note}</p>
                 </li>
               ))}
@@ -325,19 +325,19 @@ export function CalibrationClient({
       {proposal ? (
         <section className="space-y-3 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">Proposed update</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">{t("proposedUpdate")}</span>
             {typeof proposal.confidence === "number" ? (
-              <span className="text-xs text-neutral-400">confidence {proposal.confidence}</span>
+              <span className="text-xs text-neutral-400">{t("confidence", { value: proposal.confidence })}</span>
             ) : null}
           </div>
           {proposal.summary ? <p className="text-sm">{proposal.summary}</p> : null}
           {proposal.affected_paths && proposal.affected_paths.length > 0 ? (
-            <p className="text-xs text-neutral-400">Affects: {proposal.affected_paths.join(", ")}</p>
+            <p className="text-xs text-neutral-400">{t("affects", { paths: proposal.affected_paths.join(", ") })}</p>
           ) : null}
 
           <label className="block text-sm">
             <span className="mb-1 block text-xs text-neutral-500">
-              Update values (edit before accepting to apply your own version)
+              {t("updateValues")}
             </span>
             <textarea
               className={`${inputCls} min-h-40 font-mono text-xs`}
@@ -354,20 +354,20 @@ export function CalibrationClient({
           ) : null}
 
           {cal.userDecision ? (
-            <p className="text-xs text-neutral-400">Decision recorded: {cal.userDecision}</p>
+            <p className="text-xs text-neutral-400">{t("decisionRecorded", { decision: cal.userDecision })}</p>
           ) : (
             <div className="flex flex-wrap gap-3">
               <button className={btnCls} onClick={() => decide("accepted")} disabled={busy !== null}>
-                {busy === "apply" ? "Applying…" : "Accept → new version"}
+                {busy === "apply" ? t("applying") : t("acceptNewVersion")}
               </button>
               <button className={btnSecondary} onClick={() => decide("partially_accepted")} disabled={busy !== null}>
-                Partially accept
+                {t("partiallyAccept")}
               </button>
               <button className={btnSecondary} onClick={() => decide("edited")} disabled={busy !== null}>
-                Apply edited
+                {t("applyEdited")}
               </button>
               <button className={btnSecondary} onClick={() => decide("rejected")} disabled={busy !== null}>
-                Reject
+                {t("reject")}
               </button>
             </div>
           )}

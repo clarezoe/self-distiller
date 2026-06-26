@@ -6,6 +6,23 @@
 
 export type EvidenceMap = Map<string, { claim: string }>;
 
+// Locale-dependent labels the renderer needs ("Evidence", "confidence",
+// boolean Yes/No). The page resolves them via next-intl and injects them
+// before rendering so this pure module stays free of the intl runtime.
+// Rendering happens synchronously within one server request, so a module-level
+// holder is safe here.
+type JsonViewLabels = { evidence: string; confidence: string; yes: string; no: string };
+let labels: JsonViewLabels = {
+  evidence: "Evidence",
+  confidence: "confidence",
+  yes: "Yes",
+  no: "No",
+};
+
+export function setJsonViewLabels(next: JsonViewLabels) {
+  labels = next;
+}
+
 // snake_case / camelCase → "Snake case"
 export function humanizeKey(key: string): string {
   const spaced = key
@@ -36,7 +53,7 @@ function isScalar(value: unknown): value is string | number | boolean {
 }
 
 function scalarText(value: string | number | boolean): string {
-  return typeof value === "boolean" ? (value ? "Yes" : "No") : String(value);
+  return typeof value === "boolean" ? (value ? labels.yes : labels.no) : String(value);
 }
 
 const mutedLabel = "text-xs font-medium uppercase tracking-wide text-neutral-400";
@@ -49,7 +66,7 @@ function EvidenceLinks({ ids, map }: { ids: unknown; map: EvidenceMap }) {
   if (known.length === 0) return null;
   return (
     <div>
-      <p className={mutedLabel}>Evidence</p>
+      <p className={mutedLabel}>{labels.evidence}</p>
       <ul className="mt-1 space-y-0.5 text-xs text-neutral-500">
         {known.map((id) => (
           <li key={id} title={id}>
@@ -123,7 +140,7 @@ function JsonObject({
         if (key === "confidence" && typeof v === "number") {
           return (
             <p key={key} className="text-xs text-neutral-400">
-              confidence {v}
+              {labels.confidence} {v}
             </p>
           );
         }

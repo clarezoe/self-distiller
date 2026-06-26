@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveProject } from "@/lib/services/projects";
 import { listContexts } from "@/lib/services/contexts";
@@ -8,14 +9,16 @@ import { InterviewClient } from "./interview-client";
 export default async function InterviewPage() {
   const user = await getCurrentUser();
   if (!user) return null;
+  const t = await getTranslations("interview");
+  const tCommon = await getTranslations("common");
 
   const project = await getActiveProject(user.id);
   if (!project) {
     return (
       <div className="max-w-md space-y-3">
-        <h1 className="text-2xl font-semibold">Interview Studio</h1>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
         <p className="text-sm text-neutral-500">
-          Create a project first (see <span className="font-medium">Contexts</span>), then run interviews here.
+          {t.rich("createProjectFirst", { b: (chunks) => <span className="font-medium">{chunks}</span> })}
         </p>
       </div>
     );
@@ -30,10 +33,8 @@ export default async function InterviewPage() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-2xl font-semibold">Interview Studio</h1>
-        <p className="text-sm text-neutral-500">
-          Run a role-based interview that actively samples how you speak, then extract a model update.
-        </p>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
+        <p className="text-sm text-neutral-500">{t("subtitle")}</p>
       </header>
 
       <InterviewClient
@@ -44,9 +45,9 @@ export default async function InterviewPage() {
       />
 
       <section className="space-y-3 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-        <h2 className="font-medium">Past interviews ({interviews.length})</h2>
+        <h2 className="font-medium">{t("pastInterviews", { count: interviews.length })}</h2>
         {interviews.length === 0 ? (
-          <p className="text-sm text-neutral-500">None yet.</p>
+          <p className="text-sm text-neutral-500">{tCommon("none")}</p>
         ) : (
           <ul className="space-y-2 text-sm">
             {interviews.map((i) => (
@@ -62,7 +63,7 @@ export default async function InterviewPage() {
                 ) : null}
                 <span className="truncate text-neutral-500">{i.goal}</span>
                 <span className="ml-auto shrink-0 text-xs text-neutral-400">
-                  {i.extractionReport ? "extracted" : "no report"}
+                  {i.extractionReport ? t("extracted") : t("noReport")}
                 </span>
               </li>
             ))}
