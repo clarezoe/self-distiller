@@ -1,0 +1,3 @@
+{"file": "docs/self_distiller_prd_en.md", "reason": "§11 data model (multi-tenant), §16.4 privacy/isolation; auth model"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "auth+tenancy (per-user scoping), migrations, token hashing, pure-helper tests, DoD, Auth.js split config"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "owner-only invite UI + token-generate UI in Settings, server actions"}

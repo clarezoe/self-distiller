@@ -28,3 +28,22 @@ export function isAllowedEmail(
   if (!normalized) return false;
   return parseAllowlist(allowlistEnv).includes(normalized);
 }
+
+/**
+ * Invite-only sign-in decision (GitHub #13). Pure so it can be unit-tested
+ * without Auth.js / DB. Allow sign-in when the email is ANY of:
+ *  - `isUser`: already an existing User (a current member), OR
+ *  - `isInvited`: has an open Invite (not yet accepted), OR
+ *  - in the bootstrap env `AUTH_ALLOWLIST` (so the first owner can sign in
+ *    before any invite exists).
+ * Falsy / empty emails are always rejected.
+ */
+export function isSignInAllowed(
+  email: string | null | undefined,
+  opts: { isUser: boolean; isInvited: boolean; bootstrapEnv: string | undefined },
+): boolean {
+  if (!email || !email.trim()) return false;
+  if (opts.isUser) return true;
+  if (opts.isInvited) return true;
+  return isAllowedEmail(email, opts.bootstrapEnv);
+}

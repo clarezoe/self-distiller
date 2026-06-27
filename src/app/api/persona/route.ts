@@ -1,21 +1,24 @@
 import { NextResponse } from "next/server";
 import {
-  checkPersonaToken,
-  getActivePersona,
+  getPersonaForUser,
   personaETag,
+  resolvePersonaUser,
   toSystemPrompt,
 } from "@/lib/persona";
 
 // GET /api/persona?format=md|json
-// Token-gated (Authorization: Bearer <PERSONA_API_TOKEN>), NOT session-gated:
+// Token-gated (Authorization: Bearer <token>), NOT session-gated:
 // `/api/persona` is in PUBLIC_PREFIXES so the proxy never redirects it to login;
-// the token check below is the only gate. Lets external agents fetch the persona.
+// the token check below is the only gate. The Bearer is a PER-USER persona token
+// (sha256 at rest) — or the env PERSONA_API_TOKEN for the owner (back-compat).
+// Each token resolves to ITS user's persona, never another user's.
 export async function GET(request: Request) {
-  if (!checkPersonaToken(request.headers.get("authorization"))) {
+  const userId = await resolvePersonaUser(request.headers.get("authorization"));
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const persona = await getActivePersona();
+  const persona = await getPersonaForUser(userId);
   if (!persona) {
     return NextResponse.json({ error: "No active Self Model" }, { status: 404 });
   }

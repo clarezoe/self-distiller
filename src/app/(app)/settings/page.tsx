@@ -1,14 +1,18 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
 import { PROVIDER_OPTIONS, runAgent, type Provider } from "@/lib/llm";
 import {
+  generatePersonaToken,
   getSettings,
+  hasPersonaToken,
   listCredentials,
   updateSettings,
   upsertCredential,
 } from "@/lib/services/settings";
+import { createInvite, listInvites } from "@/lib/services/invites";
 import { SubmitButton } from "@/components/submit-button";
 import { AppearanceSettings } from "@/components/appearance-settings";
 
@@ -27,12 +31,20 @@ export default async function SettingsPage({
   const user = await getCurrentUser();
   if (!user) return null;
   const userId = user.id;
+  const isOwner = user.role === "owner";
   const t = await getTranslations("settings");
 
   const { test, saved } = await searchParams;
-  const [settings, creds] = await Promise.all([
+  // One-time persona token is delivered via a short-lived httpOnly flash cookie
+  // (set by generateToken below), NOT a querystring — keeps the plaintext out of
+  // the URL, browser history, and reverse-proxy access logs.
+  const cookieStore = await cookies();
+  const token = cookieStore.get("persona_token_flash")?.value;
+  const [settings, creds, personaTokenSet, invites] = await Promise.all([
     getSettings(userId),
     listCredentials(userId),
+    hasPersonaToken(userId),
+    isOwner ? listInvites() : Promise.resolve([]),
   ]);
 
   async function saveSettings(formData: FormData) {
@@ -51,6 +63,32 @@ export default async function SettingsPage({
     const baseUrl = String(formData.get("baseUrl") ?? "").trim();
     if (!apiKey || (provider !== "openai_compatible" && provider !== "anthropic")) return;
     await upsertCredential(userId, { provider, apiKey, baseUrl: baseUrl || undefined });
+    revalidatePath("/settings");
+    redirect("/settings?saved=1");
+  }
+
+  async function generateToken() {
+    "use server";
+    const plaintext = await generatePersonaToken(userId);
+    // Hand the plaintext back via a short-lived httpOnly cookie (shown once on the
+    // next render), never in the URL. Auto-expires so it is not long-lived at rest.
+    const jar = await cookies();
+    jar.set("persona_token_flash", plaintext, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/settings",
+      maxAge: 60,
+    });
+    revalidatePath("/settings");
+    redirect("/settings");
+  }
+
+  async function createInviteAction(formData: FormData) {
+    "use server";
+    const email = String(formData.get("email") ?? "").trim();
+    if (!email) return;
+    await createInvite(userId, email);
     revalidatePath("/settings");
     redirect("/settings?saved=1");
   }
@@ -164,6 +202,66 @@ export default async function SettingsPage({
           </p>
         ) : null}
       </section>
+
+      <section className="space-y-3 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
+        <h2 className="font-medium">{t("personaSection")}</h2>
+        <p className="text-sm text-neutral-500">{t("personaDescription")}</p>
+        {token ? (
+          <div className="space-y-1 rounded-md bg-amber-50 px-3 py-2 dark:bg-amber-950/40">
+            <p className="text-sm text-amber-800 dark:text-amber-200">{t("personaTokenOnce")}</p>
+            <code className="block break-all rounded bg-white px-2 py-1 text-xs dark:bg-neutral-900">{token}</code>
+          </div>
+        ) : (
+          <p className="text-sm text-neutral-500">
+            {personaTokenSet ? t("personaTokenSet") : t("personaTokenNone")}
+          </p>
+        )}
+        <form action={generateToken}>
+          <SubmitButton className={btnCls} pendingText={t("generating")}>
+            {personaTokenSet ? t("regenerateToken") : t("generateToken")}
+          </SubmitButton>
+        </form>
+      </section>
+
+      {isOwner ? (
+        <section className="space-y-4 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
+          <h2 className="font-medium">{t("invitesSection")}</h2>
+          <p className="text-sm text-neutral-500">{t("invitesDescription")}</p>
+          {invites.length > 0 ? (
+            <ul className="space-y-1 text-sm">
+              {invites.map((inv) => (
+                <li key={inv.id} className="flex items-center gap-2">
+                  <span>{inv.email}</span>
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-xs ${
+                      inv.acceptedAt
+                        ? "bg-green-100 text-green-700 dark:bg-green-950/40"
+                        : "bg-neutral-100 text-neutral-500 dark:bg-neutral-800"
+                    }`}
+                  >
+                    {inv.acceptedAt ? t("inviteStatusAccepted") : t("inviteStatusPending")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-neutral-500">{t("noInvites")}</p>
+          )}
+          <form action={createInviteAction} className="flex gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
+            <input
+              name="email"
+              type="email"
+              placeholder={t("inviteEmailPlaceholder")}
+              className={inputCls}
+              required
+              autoComplete="off"
+            />
+            <SubmitButton className={btnCls} pendingText={t("inviteSending")}>
+              {t("sendInvite")}
+            </SubmitButton>
+          </form>
+        </section>
+      ) : null}
     </div>
   );
 }

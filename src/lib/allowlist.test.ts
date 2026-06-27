@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isAllowedEmail, parseAllowlist, DEFAULT_ALLOWLIST } from "@/lib/allowlist";
+import {
+  isAllowedEmail,
+  isSignInAllowed,
+  parseAllowlist,
+  DEFAULT_ALLOWLIST,
+} from "@/lib/allowlist";
 
 describe("parseAllowlist", () => {
   it("falls back to the default when env is undefined or empty", () => {
@@ -39,5 +44,39 @@ describe("isAllowedEmail", () => {
   it("uses the default allowlist when env is unset", () => {
     expect(isAllowedEmail("clarezoe@gmx.com", undefined)).toBe(true);
     expect(isAllowedEmail("someone@else.com", undefined)).toBe(false);
+  });
+});
+
+describe("isSignInAllowed", () => {
+  const bootstrapEnv = "owner@distill.me";
+
+  it("allows an existing user (already a member)", () => {
+    expect(
+      isSignInAllowed("member@x.com", { isUser: true, isInvited: false, bootstrapEnv }),
+    ).toBe(true);
+  });
+
+  it("allows an open-invited email that is not yet a user", () => {
+    expect(
+      isSignInAllowed("invited@x.com", { isUser: false, isInvited: true, bootstrapEnv }),
+    ).toBe(true);
+  });
+
+  it("allows the bootstrap allowlist email (first owner, no invite/user yet)", () => {
+    expect(
+      isSignInAllowed("owner@distill.me", { isUser: false, isInvited: false, bootstrapEnv }),
+    ).toBe(true);
+  });
+
+  it("rejects an email that is neither user, invited, nor bootstrap", () => {
+    expect(
+      isSignInAllowed("intruder@evil.com", { isUser: false, isInvited: false, bootstrapEnv }),
+    ).toBe(false);
+  });
+
+  it("rejects falsy / empty emails regardless of flags", () => {
+    expect(isSignInAllowed(null, { isUser: true, isInvited: true, bootstrapEnv })).toBe(false);
+    expect(isSignInAllowed("", { isUser: true, isInvited: true, bootstrapEnv })).toBe(false);
+    expect(isSignInAllowed("   ", { isUser: true, isInvited: true, bootstrapEnv })).toBe(false);
   });
 });

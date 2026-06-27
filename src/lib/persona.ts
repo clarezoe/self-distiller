@@ -1,18 +1,19 @@
-// Persona export (GitHub #11 + #12). Exposes the owner's active Self Model to
-// external agents (Claude Code, Codex, MCP) as an agent-ready system prompt or
-// the structured §12 JSON. Token-gated (PERSONA_API_TOKEN), not session-gated.
+// Persona export (GitHub #11 + #12, multi-user in #13). Exposes a user's active
+// Self Model to external agents (Claude Code, Codex, MCP) as an agent-ready
+// system prompt or the structured §12 JSON. Token-gated (per-user persona token,
+// or env PERSONA_API_TOKEN for the owner — back-compat), not session-gated.
 //
-// `toSystemPrompt`, `checkPersonaToken`, and `personaETag` are PURE (no IO) and
-// unit-tested. `getActivePersona` is the only DB-touching function.
+// `toSystemPrompt`, `parseBearer`, `hashPersonaToken`, and `personaETag` are PURE
+// (no IO) and unit-tested. `resolvePersonaUser` / `getPersonaForUser` touch the DB.
 
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { getActiveModel, modelRowToJson } from "@/lib/self-model/version";
 import { getActiveProject } from "@/lib/services/projects";
 import type { SelfModelJson } from "@/lib/self-model/schema";
 
 // ---------------------------------------------------------------------------
-// Active persona resolution (owner = the single user that owns the data)
+// Per-user persona resolution (GitHub #13)
 // ---------------------------------------------------------------------------
 
 export type ActivePersona = {
@@ -21,6 +22,7 @@ export type ActivePersona = {
   createdAt: Date;
 };
 
+// The bootstrap owner: used only for the env-token back-compat path below.
 async function getOwnerUserId(): Promise<string | null> {
   const owner = await prisma.user.findFirst({
     where: { role: "owner" },
@@ -38,11 +40,8 @@ async function getOwnerUserId(): Promise<string | null> {
   return any?.id ?? null;
 }
 
-// Resolve the owner's active project → its active SelfModel as §12 JSON.
-export async function getActivePersona(): Promise<ActivePersona | null> {
-  const userId = await getOwnerUserId();
-  if (!userId) return null;
-
+// Resolve a specific user's active project → its active SelfModel as §12 JSON.
+export async function getPersonaForUser(userId: string): Promise<ActivePersona | null> {
   const project = await getActiveProject(userId);
   if (!project) return null;
 
@@ -57,23 +56,55 @@ export async function getActivePersona(): Promise<ActivePersona | null> {
 }
 
 // ---------------------------------------------------------------------------
-// Token auth (constant-time Bearer compare against PERSONA_API_TOKEN)
+// Per-user persona token (sha256 at rest). PURE helpers are unit-tested.
 // ---------------------------------------------------------------------------
 
 const BEARER = "Bearer ";
 
-export function checkPersonaToken(authHeader: string | null): boolean {
-  const expected = process.env.PERSONA_API_TOKEN;
-  if (!expected) return false; // unset/empty env → deny
-  if (!authHeader || !authHeader.startsWith(BEARER)) return false;
+// Parse a raw Bearer token out of an Authorization header. Returns null when the
+// header is missing or not a non-empty Bearer.
+export function parseBearer(authHeader: string | null): string | null {
+  if (!authHeader || !authHeader.startsWith(BEARER)) return null;
+  const token = authHeader.slice(BEARER.length).trim();
+  return token.length > 0 ? token : null;
+}
 
-  const provided = authHeader.slice(BEARER.length);
+// SHA-256 (hex) of a persona token. Stored on User.personaTokenHash; the
+// plaintext is shown once and never persisted/logged.
+export function hashPersonaToken(token: string): string {
+  return createHash("sha256").update(token, "utf8").digest("hex");
+}
+
+// Constant-time compare of a raw provided token against env PERSONA_API_TOKEN
+// (back-compat). Length leak is acceptable; the token is high-entropy.
+function matchesEnvToken(provided: string): boolean {
+  const expected = process.env.PERSONA_API_TOKEN;
+  if (!expected) return false;
   const a = Buffer.from(provided, "utf8");
   const b = Buffer.from(expected, "utf8");
-  // Length check first (timingSafeEqual throws on mismatched lengths). Leaking
-  // the token length is acceptable; the token is high-entropy.
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
+}
+
+// Resolve the userId an Authorization header authenticates as, or null:
+//  1. Bearer == env PERSONA_API_TOKEN  → the bootstrap owner (back-compat).
+//  2. sha256(Bearer) == a User.personaTokenHash → that user.
+// Otherwise null.
+export async function resolvePersonaUser(authHeader: string | null): Promise<string | null> {
+  const token = parseBearer(authHeader);
+  if (!token) return null;
+
+  // Back-compat: the existing live env token resolves to the owner.
+  if (matchesEnvToken(token)) {
+    return getOwnerUserId();
+  }
+
+  const hash = hashPersonaToken(token);
+  const user = await prisma.user.findFirst({
+    where: { personaTokenHash: hash },
+    select: { id: true },
+  });
+  return user?.id ?? null;
 }
 
 // ---------------------------------------------------------------------------

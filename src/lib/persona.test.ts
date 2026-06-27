@@ -1,35 +1,33 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { checkPersonaToken, personaETag, toSystemPrompt } from "./persona";
+import { createHash } from "node:crypto";
+import { describe, expect, it } from "vitest";
+import { hashPersonaToken, parseBearer, personaETag, toSystemPrompt } from "./persona";
 import { emptySelfModel, type SelfModelJson } from "./self-model/schema";
 
-describe("checkPersonaToken", () => {
-  const prev = process.env.PERSONA_API_TOKEN;
-  afterEach(() => {
-    if (prev === undefined) delete process.env.PERSONA_API_TOKEN;
-    else process.env.PERSONA_API_TOKEN = prev;
+describe("parseBearer", () => {
+  it("extracts a non-empty Bearer token", () => {
+    expect(parseBearer("Bearer abc123")).toBe("abc123");
+    expect(parseBearer("Bearer  spaced ")).toBe("spaced");
   });
 
-  it("returns false when the env token is unset", () => {
-    delete process.env.PERSONA_API_TOKEN;
-    expect(checkPersonaToken("Bearer anything")).toBe(false);
+  it("returns null for missing / malformed / empty headers", () => {
+    expect(parseBearer(null)).toBe(null);
+    expect(parseBearer("abc123")).toBe(null); // no Bearer prefix
+    expect(parseBearer("Bearer ")).toBe(null); // empty token
+    expect(parseBearer("Bearer    ")).toBe(null); // whitespace only
+  });
+});
+
+describe("hashPersonaToken", () => {
+  it("is a stable sha256 hex of the token (never the plaintext)", () => {
+    const token = "my-secret-token";
+    const expected = createHash("sha256").update(token, "utf8").digest("hex");
+    expect(hashPersonaToken(token)).toBe(expected);
+    expect(hashPersonaToken(token)).toHaveLength(64);
+    expect(hashPersonaToken(token)).not.toContain(token);
   });
 
-  it("returns false when the env token is empty", () => {
-    process.env.PERSONA_API_TOKEN = "";
-    expect(checkPersonaToken("Bearer anything")).toBe(false);
-  });
-
-  it("returns false for a missing or malformed header", () => {
-    process.env.PERSONA_API_TOKEN = "secret-token";
-    expect(checkPersonaToken(null)).toBe(false);
-    expect(checkPersonaToken("secret-token")).toBe(false); // no Bearer prefix
-    expect(checkPersonaToken("Bearer wrong")).toBe(false);
-    expect(checkPersonaToken("Bearer secret-tokenX")).toBe(false); // length mismatch
-  });
-
-  it("returns true for the exact Bearer token", () => {
-    process.env.PERSONA_API_TOKEN = "secret-token";
-    expect(checkPersonaToken("Bearer secret-token")).toBe(true);
+  it("differs for different tokens", () => {
+    expect(hashPersonaToken("a")).not.toBe(hashPersonaToken("b"));
   });
 });
 

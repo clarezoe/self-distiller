@@ -24,6 +24,9 @@ model User {
   image         String?
   passwordHash  String? // Credentials provider (single owner); null for OAuth users
   role          String    @default("owner")
+  // SHA-256 (hex) of the user's per-user persona API token (GitHub #13). Null
+  // until the user generates one; the plaintext token is shown once and never stored.
+  personaTokenHash String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -32,6 +35,20 @@ model User {
   projects    Project[]
   credentials Credential[]
   llmSettings LlmSettings?
+}
+
+// Invite-only auth (GitHub #13). An owner creates an Invite for an email; that
+// email may then sign in via magic link. On the invitee's first sign-in the
+// adapter creates the User (role "member") and acceptedAt is stamped.
+model Invite {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  invitedByUserId String
+  token           String    @unique
+  createdAt       DateTime  @default(now())
+  acceptedAt      DateTime?
+
+  @@index([invitedByUserId])
 }
 
 model Account {
