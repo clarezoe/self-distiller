@@ -25,3 +25,15 @@ Postgres `distill-db` (Dokploy-managed). Backups: `~/Downloads/distill-backups/`
 `stack.yml`, `traefik-distill.yml`, `redeploy.sh` were the original **SSH-only Docker
 Swarm** deploy (issue #6), now replaced by Dokploy (issue #10). The old swarm stack
 `distill` was torn down. These files are kept for reference only — do not run them.
+
+## ⚠️ Migrations are NOT auto-applied by Dokploy
+The Dockerfile runs `node server.js` only — it does NOT run `prisma migrate deploy`.
+After pushing a migration, apply it to the Dokploy Postgres manually:
+```
+# get the postgres container (appName from Dokploy → distill-db)
+ssh feifeiecom 'docker exec -i <pg-container> psql -U distill -d distill_me' < prisma/migrations/<ts>/migration.sql
+# then record it so prisma stays consistent:
+#   INSERT INTO "_prisma_migrations"(id,checksum,finished_at,migration_name,started_at,applied_steps_count)
+#   VALUES (gen_random_uuid()::text,'<sha256 of migration.sql>',now(),'<ts>_<name>',now(),1);
+```
+TODO: add a Dokploy pre-deploy command or a migrate-on-start entrypoint so this is automatic.
