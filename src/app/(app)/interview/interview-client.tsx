@@ -40,7 +40,7 @@ type StartResult = {
 };
 
 // Fallback interview languages when the project has defined no language-type contexts.
-const DEFAULT_LANGUAGES = ["zh", "en", "sv"];
+const DEFAULT_LANGUAGES = ["zh", "en", "sv", "sr"];
 
 type UpdateProposal = {
   summary?: string;
