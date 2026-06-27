@@ -71,6 +71,9 @@ Hard rules (PRD §13.2):
 export function buildInterviewPlannerMessages(input: {
   type: string;
   interviewerPersona: string;
+  // Rich, user-authored persona background (GitHub #8 v1). When present, the planner stays
+  // fully in this persona's voice; when absent, only the persona NAME shapes the voice.
+  interviewerPersonaDescription?: string;
   goal?: string;
   targetContexts?: string[];
   modelSubset?: PlannerSelfModelSubset;
@@ -102,13 +105,18 @@ export function buildInterviewPlannerMessages(input: {
     ? `Interview language: ${language}. Conduct the ENTIRE interview in ${language}; write EVERY question/turn (the "text" field) in ${language}. Note the language in the goal.`
     : null;
 
+  const personaDescription = input.interviewerPersonaDescription?.trim();
+  const personaBlock = personaDescription
+    ? `Interviewer persona: ${input.interviewerPersona} — ${personaDescription}\nStay FULLY in character as this specific person: match their tone, vocabulary, directness, warmth/coldness, and exactly how they would push the user. Every turn must sound like THEM, not a neutral interviewer.`
+    : `Interviewer persona: ${input.interviewerPersona}`;
+
   return [
     { role: "system", content: SYSTEM },
     {
       role: "user",
       content: [
         `Interview type: ${input.type} — ${typeHint}`,
-        `Interviewer persona: ${input.interviewerPersona}`,
+        personaBlock,
         languageBlock,
         input.goal ? `Requested goal: ${input.goal}` : "No explicit goal given — derive one concrete sampling goal.",
         contextBlock,

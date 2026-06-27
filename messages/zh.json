@@ -218,7 +218,19 @@
     "errFailedStart": "开始访谈失败",
     "errFailedTurn": "追加轮次失败",
     "errExtractionFailed": "提取失败",
-    "errApplyFailed": "应用失败"
+    "errApplyFailed": "应用失败",
+    "customPersona": "自定义（自由输入）",
+    "usingPersona": "正在使用已保存的人设——其描述将引导访谈者的语气。",
+    "savedPersonas": "已保存的人设（{count}）",
+    "noPersonas": "还没有已保存的人设。把你生活中的具体的人加进来——直率的合伙人、温柔的父母、苛刻的客户。",
+    "personaNamePlaceholder": "名称（例如：直率的合伙人）",
+    "personaRelationshipPlaceholder": "关系（可选，例如：合伙人）",
+    "personaDescriptionPlaceholder": "描述他们说话的方式：语气、用词、直接程度、会怎样追问你。",
+    "addPersona": "添加人设",
+    "savingPersona": "保存中…",
+    "deletePersona": "删除",
+    "errPersonaCreate": "保存人设失败",
+    "errPersonaDelete": "删除人设失败"
   },
   "calibration": {
     "title": "校准",

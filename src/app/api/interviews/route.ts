@@ -10,6 +10,8 @@ const createSchema = z.object({
   projectId: z.string().min(1),
   type: z.enum(["daily", "information", "role", "language", "relationship", "stress", "conflict", "creative"]),
   interviewerPersona: z.string().min(1),
+  // Optional rich background for a saved/named persona (GitHub #8 v1); threads into the planner voice.
+  interviewerPersonaDescription: z.string().max(2000).optional(),
   targetContextIds: z.array(z.string().min(1)).optional(),
   // Language the interview is CONDUCTED in (zh/en/sv/... or a free label). Independent of UI locale.
   language: z.string().min(1).max(64).optional(),
@@ -39,6 +41,7 @@ export async function POST(request: Request) {
     const plan = await planInterview(user.id, project.id, {
       type: parsed.data.type as InterviewType,
       interviewerPersona: parsed.data.interviewerPersona,
+      interviewerPersonaDescription: parsed.data.interviewerPersonaDescription,
       targetContextIds: parsed.data.targetContextIds,
       language: parsed.data.language,
       goal: parsed.data.goal,
@@ -47,7 +50,11 @@ export async function POST(request: Request) {
     const now = new Date().toISOString();
     const interview = await createInterview(project.id, {
       type: parsed.data.type as InterviewType,
-      interviewerPersona: plan.interviewer_persona || parsed.data.interviewerPersona,
+      // For a saved/named persona keep the user-authored NAME clean (don't let the planner
+      // echo the description into the stored name). Free-text keeps prior behavior.
+      interviewerPersona: parsed.data.interviewerPersonaDescription
+        ? parsed.data.interviewerPersona
+        : plan.interviewer_persona || parsed.data.interviewerPersona,
       targetContextIds: parsed.data.targetContextIds ?? [],
       language: parsed.data.language,
       goal: plan.goal,

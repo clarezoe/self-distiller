@@ -137,6 +137,7 @@ model Project {
   evidenceItems       EvidenceItem[]
   selfModels          SelfModel[]
   interviews          Interview[]
+  interviewerPersonas InterviewerPersona[]
   blindCalibrations   BlindCalibration[]
   modelUpdates        ModelUpdate[]
   taskOutputs         TaskOutput[]
@@ -321,6 +322,24 @@ model Interview {
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  @@index([projectId])
+}
+
+// Named, reusable interviewer personas (GitHub #8 v1). The user authors a persona —
+// a specific person in their life (blunt cofounder, gentle parent, demanding customer) —
+// and its description threads into the interview planner as the interviewer's voice.
+// projectId-scoped → per-user isolated (consistent with all domain tables).
+model InterviewerPersona {
+  id           String   @id @default(cuid())
+  projectId    String
+  name         String
+  description  String
+  relationship String?
+  createdAt    DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
   @@index([projectId])
 }
 

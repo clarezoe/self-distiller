@@ -218,7 +218,19 @@
     "errFailedStart": "Failed to start interview",
     "errFailedTurn": "Failed to append turn",
     "errExtractionFailed": "Extraction failed",
-    "errApplyFailed": "Apply failed"
+    "errApplyFailed": "Apply failed",
+    "customPersona": "Custom (free text)",
+    "usingPersona": "Using a saved persona — its description guides the interviewer's voice.",
+    "savedPersonas": "Saved personas ({count})",
+    "noPersonas": "No saved personas yet. Add the specific people in your life — a blunt cofounder, a gentle parent, a demanding customer.",
+    "personaNamePlaceholder": "Name (e.g. Blunt cofounder)",
+    "personaRelationshipPlaceholder": "Relationship (optional, e.g. cofounder)",
+    "personaDescriptionPlaceholder": "Describe how they talk: tone, vocabulary, directness, how they'd push you.",
+    "addPersona": "Add persona",
+    "savingPersona": "Saving…",
+    "deletePersona": "Delete",
+    "errPersonaCreate": "Failed to save persona",
+    "errPersonaDelete": "Failed to delete persona"
   },
   "calibration": {
     "title": "Calibration",

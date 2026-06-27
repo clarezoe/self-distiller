@@ -27,6 +27,7 @@ export async function planInterview(
   input: {
     type: InterviewType;
     interviewerPersona: string;
+    interviewerPersonaDescription?: string;
     targetContextIds?: string[];
     language?: string;
     goal?: string;
@@ -51,6 +52,7 @@ export async function planInterview(
   const messages = buildInterviewPlannerMessages({
     type: input.type,
     interviewerPersona: input.interviewerPersona,
+    interviewerPersonaDescription: input.interviewerPersonaDescription,
     goal: input.goal,
     targetContexts: input.targetContextIds,
     language: input.language,

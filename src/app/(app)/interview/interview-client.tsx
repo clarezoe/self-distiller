@@ -26,6 +26,7 @@ const PERSONA_SUGGESTIONS = [
 ];
 
 type ContextOption = { id: string; type: string; name: string };
+type Persona = { id: string; name: string; description: string; relationship: string | null };
 type Turn = { speaker: "agent" | "user"; text: string; timestamp: string };
 type PlannedTurn = { text: string; purpose: string };
 
@@ -69,11 +70,13 @@ export function InterviewClient({
   projectId,
   interviewTypes,
   contexts,
+  personas: initialPersonas,
   hasModel,
 }: {
   projectId: string;
   interviewTypes: string[];
   contexts: ContextOption[];
+  personas: Persona[];
   hasModel: boolean;
 }) {
   const router = useRouter();
@@ -89,6 +92,11 @@ export function InterviewClient({
 
   const [type, setType] = useState(interviewTypes[0] ?? "relationship");
   const [persona, setPersona] = useState(PERSONA_SUGGESTIONS[0]);
+  // Saved/named personas (GitHub #8 v1). Local list kept in sync with create/delete.
+  const [personas, setPersonas] = useState<Persona[]>(initialPersonas);
+  // When a saved persona is selected, its description threads into the planner. Free text → undefined.
+  const [personaDescription, setPersonaDescription] = useState<string | undefined>(undefined);
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string>("");
   const [goal, setGoal] = useState("");
   const [language, setLanguage] = useState(languageOptions[0] ?? "");
   const [selectedContexts, setSelectedContexts] = useState<string[]>([]);
@@ -102,10 +110,84 @@ export function InterviewClient({
   const [reply, setReply] = useState("");
   const [report, setReport] = useState<ExtractionReport | null>(null);
 
-  const [busy, setBusy] = useState<null | "start" | "send" | "extract" | "apply">(null);
+  const [busy, setBusy] = useState<null | "start" | "send" | "extract" | "apply" | "persona">(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  // ---- Saved-persona manager (add form) ----
+  const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newRelationship, setNewRelationship] = useState("");
+  const [personaError, setPersonaError] = useState<string | null>(null);
+
+  // Pick a saved persona: set the interviewer name + thread its description into the start call.
+  function selectSavedPersona(id: string) {
+    const found = personas.find((p) => p.id === id);
+    if (!found) {
+      setSelectedPersonaId("");
+      setPersonaDescription(undefined);
+      return;
+    }
+    setSelectedPersonaId(id);
+    setPersona(found.name);
+    setPersonaDescription(found.description);
+  }
+
+  // Editing the free-text persona drops the saved selection (back-compat: free text still works).
+  function onPersonaTextChange(value: string) {
+    setPersona(value);
+    setSelectedPersonaId("");
+    setPersonaDescription(undefined);
+  }
+
+  async function addPersona() {
+    if (!newName.trim() || !newDescription.trim()) return;
+    setPersonaError(null);
+    setBusy("persona");
+    try {
+      const res = await fetch("/api/interviewer-personas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          name: newName.trim(),
+          description: newDescription.trim(),
+          relationship: newRelationship.trim() || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error(await readError(res, t("errPersonaCreate")));
+      const data = (await res.json()) as { persona: Persona };
+      setPersonas((prev) => [data.persona, ...prev]);
+      setNewName("");
+      setNewDescription("");
+      setNewRelationship("");
+    } catch (e) {
+      setPersonaError(e instanceof Error ? e.message : tCommon("somethingWrong"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function removePersona(id: string) {
+    setPersonaError(null);
+    setBusy("persona");
+    try {
+      const res = await fetch(`/api/interviewer-personas/${id}?projectId=${encodeURIComponent(projectId)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await readError(res, t("errPersonaDelete")));
+      setPersonas((prev) => prev.filter((p) => p.id !== id));
+      if (selectedPersonaId === id) {
+        setSelectedPersonaId("");
+        setPersonaDescription(undefined);
+      }
+    } catch (e) {
+      setPersonaError(e instanceof Error ? e.message : tCommon("somethingWrong"));
+    } finally {
+      setBusy(null);
+    }
+  }
 
   // The next un-asked planned interviewer turn (turn 0 is seeded at start).
   const askedAgentTurns = transcript.filter((t) => t.speaker === "agent").length;
@@ -127,6 +209,7 @@ export function InterviewClient({
           projectId,
           type,
           interviewerPersona: persona,
+          interviewerPersonaDescription: personaDescription || undefined,
           targetContextIds: selectedContexts,
           language: language.trim() || undefined,
           goal: goal || undefined,
@@ -250,11 +333,25 @@ export function InterviewClient({
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-neutral-500">{t("interviewerPersona")}</span>
+            {personas.length > 0 ? (
+              <select
+                className={`${inputCls} mb-2`}
+                value={selectedPersonaId}
+                onChange={(e) => selectSavedPersona(e.target.value)}
+              >
+                <option value="">{t("customPersona")}</option>
+                {personas.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.relationship ? `${p.name} (${p.relationship})` : p.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <input
               className={inputCls}
               list="persona-suggestions"
               value={persona}
-              onChange={(e) => setPersona(e.target.value)}
+              onChange={(e) => onPersonaTextChange(e.target.value)}
               placeholder={t("personaPlaceholder")}
             />
             <datalist id="persona-suggestions">
@@ -262,8 +359,25 @@ export function InterviewClient({
                 <option key={p} value={p} />
               ))}
             </datalist>
+            {personaDescription ? (
+              <p className="mt-1 text-xs text-neutral-400">{t("usingPersona")}</p>
+            ) : null}
           </label>
         </div>
+
+        <PersonaManager
+          personas={personas}
+          newName={newName}
+          newDescription={newDescription}
+          newRelationship={newRelationship}
+          onName={setNewName}
+          onDescription={setNewDescription}
+          onRelationship={setNewRelationship}
+          onAdd={addPersona}
+          onRemove={removePersona}
+          busy={busy === "persona"}
+          error={personaError}
+        />
 
         <label className="block text-sm sm:max-w-xs">
           <span className="mb-1 block text-neutral-500">{t("interviewLanguage")}</span>
@@ -486,6 +600,117 @@ function ReportView({
         </button>
       </div>
     </section>
+  );
+}
+
+function PersonaManager({
+  personas,
+  newName,
+  newDescription,
+  newRelationship,
+  onName,
+  onDescription,
+  onRelationship,
+  onAdd,
+  onRemove,
+  busy,
+  error,
+}: {
+  personas: Persona[];
+  newName: string;
+  newDescription: string;
+  newRelationship: string;
+  onName: (v: string) => void;
+  onDescription: (v: string) => void;
+  onRelationship: (v: string) => void;
+  onAdd: () => void;
+  onRemove: (id: string) => void;
+  busy: boolean;
+  error: string | null;
+}) {
+  const t = useTranslations("interview");
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between px-4 py-2 text-sm font-medium"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span>{t("savedPersonas", { count: personas.length })}</span>
+        <span className="text-neutral-400">{open ? "−" : "+"}</span>
+      </button>
+      {open ? (
+        <div className="space-y-3 border-t border-neutral-200 p-4 dark:border-neutral-800">
+          {personas.length > 0 ? (
+            <ul className="space-y-2">
+              {personas.map((p) => (
+                <li
+                  key={p.id}
+                  className="flex items-start justify-between gap-3 rounded-md border border-neutral-200 p-2 text-sm dark:border-neutral-800"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      {p.name}
+                      {p.relationship ? (
+                        <span className="ml-2 rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-500 dark:bg-neutral-800">
+                          {p.relationship}
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="text-xs text-neutral-500">{p.description}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="shrink-0 text-xs text-red-600 hover:underline disabled:opacity-50"
+                    onClick={() => onRemove(p.id)}
+                    disabled={busy}
+                  >
+                    {t("deletePersona")}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-neutral-500">{t("noPersonas")}</p>
+          )}
+
+          <div className="space-y-2 border-t border-neutral-200 pt-3 dark:border-neutral-800">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input
+                className={inputCls}
+                value={newName}
+                onChange={(e) => onName(e.target.value)}
+                placeholder={t("personaNamePlaceholder")}
+              />
+              <input
+                className={inputCls}
+                value={newRelationship}
+                onChange={(e) => onRelationship(e.target.value)}
+                placeholder={t("personaRelationshipPlaceholder")}
+              />
+            </div>
+            <textarea
+              className={`${inputCls} min-h-20`}
+              value={newDescription}
+              onChange={(e) => onDescription(e.target.value)}
+              placeholder={t("personaDescriptionPlaceholder")}
+            />
+            {error ? (
+              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40">{error}</p>
+            ) : null}
+            <button
+              type="button"
+              className={btnSecondary}
+              onClick={onAdd}
+              disabled={busy || !newName.trim() || !newDescription.trim()}
+            >
+              {busy ? t("savingPersona") : t("addPersona")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

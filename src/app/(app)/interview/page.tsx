@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getActiveProject } from "@/lib/services/projects";
 import { listContexts } from "@/lib/services/contexts";
 import { INTERVIEW_TYPES, listInterviews } from "@/lib/services/interviews";
+import { listPersonas } from "@/lib/services/interviewer-personas";
 import { getActiveModel } from "@/lib/self-model/version";
 import { InterviewClient } from "./interview-client";
 
@@ -24,10 +25,11 @@ export default async function InterviewPage() {
     );
   }
 
-  const [contexts, interviews, activeModel] = await Promise.all([
+  const [contexts, interviews, activeModel, personas] = await Promise.all([
     listContexts(project.id),
     listInterviews(project.id),
     getActiveModel(project.id),
+    listPersonas(project.id),
   ]);
 
   return (
@@ -41,6 +43,12 @@ export default async function InterviewPage() {
         projectId={project.id}
         interviewTypes={[...INTERVIEW_TYPES]}
         contexts={contexts.map((c) => ({ id: c.id, type: c.type, name: c.name }))}
+        personas={personas.map((p) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          relationship: p.relationship,
+        }))}
         hasModel={!!activeModel}
       />
 
