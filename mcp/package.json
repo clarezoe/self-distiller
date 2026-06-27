@@ -1,0 +1,17 @@
+{
+  "name": "persona-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal MCP stdio server exposing the distilled persona (get_persona).",
+  "bin": {
+    "persona-mcp": "./persona-mcp.mjs"
+  },
+  "scripts": {
+    "start": "node persona-mcp.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.8"
+  }
+}

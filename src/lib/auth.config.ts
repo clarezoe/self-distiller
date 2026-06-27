@@ -3,7 +3,9 @@ import type { NextAuthConfig } from "next-auth";
 // Lightweight config shared by the proxy (middleware) and the full server config.
 // MUST NOT import Prisma, bcrypt, or other Node-only deps — the proxy bundle
 // includes this, and route gating only needs the JWT (no DB access).
-const PUBLIC_PREFIXES = ["/login", "/api/auth"];
+// `/api/persona` is token-gated (PERSONA_API_TOKEN) in its own handler, not
+// session-gated — keep it out of the login redirect so external agents reach it.
+const PUBLIC_PREFIXES = ["/login", "/api/auth", "/api/persona"];
 
 export const authConfig = {
   trustHost: true,
