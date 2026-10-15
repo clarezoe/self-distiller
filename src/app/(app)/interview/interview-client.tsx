@@ -1,8 +1,8 @@
 "use client";
 
-import { voiceEvidenceLevel } from "@/lib/prompts/persona-voice-distiller";
 import { useState, useTransition } from "react";
 import { languageLabel } from "@/lib/language-label";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
@@ -33,13 +33,8 @@ type Persona = {
   name: string;
   description: string;
   relationship: string | null;
-  voiceProfile: string | null;
-  voiceDistilledAt: string | null;
-  voiceSampleChars: number;
 };
 
-const VOICE_MIN = 200;
-const VOICE_MAX = 20000;
 type Turn = { speaker: "agent" | "user"; text: string; timestamp: string };
 type PlannedTurn = { text: string; purpose: string };
 
@@ -83,13 +78,15 @@ export function InterviewClient({
   projectId,
   interviewTypes,
   contexts,
-  personas: initialPersonas,
+  personas,
+  initialPersonaId,
   hasModel,
 }: {
   projectId: string;
   interviewTypes: string[];
   contexts: ContextOption[];
   personas: Persona[];
+  initialPersonaId?: string;
   hasModel: boolean;
 }) {
   const router = useRouter();
@@ -104,12 +101,11 @@ export function InterviewClient({
   })();
 
   const [type, setType] = useState(interviewTypes[0] ?? "relationship");
-  const [persona, setPersona] = useState(PERSONA_SUGGESTIONS[0]);
-  // Saved/named personas (GitHub #8 v1). Local list kept in sync with create/delete.
-  const [personas, setPersonas] = useState<Persona[]>(initialPersonas);
+  const preselected = personas.find((p) => p.id === initialPersonaId);
+  const [persona, setPersona] = useState(preselected?.name ?? PERSONA_SUGGESTIONS[0]);
   // When a saved persona is selected, its description threads into the planner. Free text → undefined.
-  const [personaDescription, setPersonaDescription] = useState<string | undefined>(undefined);
-  const [selectedPersonaId, setSelectedPersonaId] = useState<string>("");
+  const [personaDescription, setPersonaDescription] = useState<string | undefined>(preselected?.description);
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string>(preselected?.id ?? "");
   const [goal, setGoal] = useState("");
   const [language, setLanguage] = useState(languageOptions[0] ?? "");
   // "Other…" in the language select reveals a free-text input for a custom language.
@@ -125,16 +121,10 @@ export function InterviewClient({
   const [reply, setReply] = useState("");
   const [report, setReport] = useState<ExtractionReport | null>(null);
 
-  const [busy, setBusy] = useState<null | "start" | "send" | "extract" | "apply" | "persona">(null);
+  const [busy, setBusy] = useState<null | "start" | "send" | "extract" | "apply">(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [, startTransition] = useTransition();
-
-  // ---- Saved-persona manager (add form) ----
-  const [newName, setNewName] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-  const [newRelationship, setNewRelationship] = useState("");
-  const [personaError, setPersonaError] = useState<string | null>(null);
 
   // Pick a saved persona: set the interviewer name + thread its description into the start call.
   function selectSavedPersona(id: string) {
@@ -154,54 +144,6 @@ export function InterviewClient({
     setPersona(value);
     setSelectedPersonaId("");
     setPersonaDescription(undefined);
-  }
-
-  async function addPersona() {
-    if (!newName.trim() || !newDescription.trim()) return;
-    setPersonaError(null);
-    setBusy("persona");
-    try {
-      const res = await fetch("/api/interviewer-personas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId,
-          name: newName.trim(),
-          description: newDescription.trim(),
-          relationship: newRelationship.trim() || undefined,
-        }),
-      });
-      if (!res.ok) throw new Error(await readError(res, t("errPersonaCreate")));
-      const data = (await res.json()) as { persona: Persona };
-      setPersonas((prev) => [data.persona, ...prev]);
-      setNewName("");
-      setNewDescription("");
-      setNewRelationship("");
-    } catch (e) {
-      setPersonaError(e instanceof Error ? e.message : tCommon("somethingWrong"));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function removePersona(id: string) {
-    setPersonaError(null);
-    setBusy("persona");
-    try {
-      const res = await fetch(`/api/interviewer-personas/${id}?projectId=${encodeURIComponent(projectId)}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error(await readError(res, t("errPersonaDelete")));
-      setPersonas((prev) => prev.filter((p) => p.id !== id));
-      if (selectedPersonaId === id) {
-        setSelectedPersonaId("");
-        setPersonaDescription(undefined);
-      }
-    } catch (e) {
-      setPersonaError(e instanceof Error ? e.message : tCommon("somethingWrong"));
-    } finally {
-      setBusy(null);
-    }
   }
 
   // The next un-asked planned interviewer turn (turn 0 is seeded at start).
@@ -385,23 +327,15 @@ export function InterviewClient({
               <p className="mt-1 text-xs text-neutral-400">{t("usingPersona")}</p>
             ) : null}
           </label>
+          <div className="text-sm sm:col-span-2">
+            {personas.length === 0 ? (
+              <p className="text-xs text-neutral-500">{t("noSavedPersonasHint")} </p>
+            ) : null}
+            <Link href="/personas" className="inline-flex min-h-11 items-center text-sm text-blue-600 hover:underline dark:text-blue-400">
+              {t("managePersonas")}
+            </Link>
+          </div>
         </div>
-
-        <PersonaManager
-          personas={personas}
-          newName={newName}
-          newDescription={newDescription}
-          newRelationship={newRelationship}
-          onName={setNewName}
-          onDescription={setNewDescription}
-          onRelationship={setNewRelationship}
-          onAdd={addPersona}
-          onRemove={removePersona}
-          onUpdated={(p) => setPersonas((prev) => prev.map((x) => (x.id === p.id ? p : x)))}
-          projectId={projectId}
-          busy={busy === "persona"}
-          error={personaError}
-        />
 
         <label className="block text-sm sm:max-w-xs">
           <span className="mb-1 block text-neutral-500">{t("interviewLanguage")}</span>
@@ -640,288 +574,6 @@ function ReportView({
         </button>
       </div>
     </section>
-  );
-}
-
-function PersonaManager({
-  personas,
-  newName,
-  newDescription,
-  newRelationship,
-  onName,
-  onDescription,
-  onRelationship,
-  onAdd,
-  onRemove,
-  onUpdated,
-  projectId,
-  busy,
-  error,
-}: {
-  personas: Persona[];
-  newName: string;
-  newDescription: string;
-  newRelationship: string;
-  onName: (v: string) => void;
-  onDescription: (v: string) => void;
-  onRelationship: (v: string) => void;
-  onAdd: () => void;
-  onRemove: (id: string) => void;
-  onUpdated: (p: Persona) => void;
-  projectId: string;
-  busy: boolean;
-  error: string | null;
-}) {
-  const t = useTranslations("interview");
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between px-4 py-2 text-sm font-medium"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span>{t("savedPersonas", { count: personas.length })}</span>
-        <span className="text-neutral-400">{open ? "−" : "+"}</span>
-      </button>
-      {open ? (
-        <div className="space-y-3 border-t border-neutral-200 p-4 dark:border-neutral-800">
-          {personas.length > 0 ? (
-            <ul className="space-y-2">
-              {personas.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex items-start justify-between gap-3 rounded-md border border-neutral-200 p-2 text-sm dark:border-neutral-800"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium">
-                      {p.name}
-                      {p.relationship ? (
-                        <span className="ml-2 rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-500 dark:bg-neutral-800">
-                          {p.relationship}
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="text-xs text-neutral-500">{p.description}</p>
-                    <VoiceControls persona={p} projectId={projectId} onUpdated={onUpdated} disabled={busy} />
-                  </div>
-                  <button
-                    type="button"
-                    className="min-h-11 shrink-0 px-2 text-xs text-red-600 hover:underline disabled:opacity-50"
-                    onClick={() => onRemove(p.id)}
-                    disabled={busy}
-                  >
-                    {t("deletePersona")}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-neutral-500">{t("noPersonas")}</p>
-          )}
-
-          <div className="space-y-2 border-t border-neutral-200 pt-3 dark:border-neutral-800">
-            <div className="grid gap-2 sm:grid-cols-2">
-              <input
-                className={inputCls}
-                value={newName}
-                onChange={(e) => onName(e.target.value)}
-                placeholder={t("personaNamePlaceholder")}
-              />
-              <input
-                className={inputCls}
-                value={newRelationship}
-                onChange={(e) => onRelationship(e.target.value)}
-                placeholder={t("personaRelationshipPlaceholder")}
-              />
-            </div>
-            <textarea
-              className={`${inputCls} min-h-20`}
-              value={newDescription}
-              onChange={(e) => onDescription(e.target.value)}
-              placeholder={t("personaDescriptionPlaceholder")}
-            />
-            {error ? (
-              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40">{error}</p>
-            ) : null}
-            <button
-              type="button"
-              className={btnSecondary}
-              onClick={onAdd}
-              disabled={busy || !newName.trim() || !newDescription.trim()}
-            >
-              {busy ? t("savingPersona") : t("addPersona")}
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-// Per-persona voice distillation (GitHub #15). Samples live only in this component's state
-// for the duration of the request; they are never stored client- or server-side.
-function VoiceControls({
-  persona,
-  projectId,
-  onUpdated,
-  disabled,
-}: {
-  persona: Persona;
-  projectId: string;
-  onUpdated: (p: Persona) => void;
-  disabled: boolean;
-}) {
-  const t = useTranslations("interview");
-  const tCommon = useTranslations("common");
-  const [editing, setEditing] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [samples, setSamples] = useState("");
-  const [mode, setMode] = useState<"add" | "replace">("replace");
-  const [pending, setPending] = useState<null | "distill" | "clear">(null);
-  const [err, setErr] = useState<string | null>(null);
-  const trimmedLen = samples.trim().length;
-  const tooShort = trimmedLen > 0 && trimmedLen < VOICE_MIN;
-  const canSubmit = trimmedLen >= VOICE_MIN && trimmedLen <= VOICE_MAX;
-  const base = `/api/interviewer-personas/${persona.id}/distill`;
-
-  async function distill() {
-    setErr(null);
-    setPending("distill");
-    try {
-      const res = await fetch(base, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, samples, mode }),
-      });
-      if (!res.ok) throw new Error(await readError(res, t("errVoiceDistill")));
-      const data = (await res.json()) as { persona: Persona };
-      onUpdated({
-        ...persona,
-        voiceProfile: data.persona.voiceProfile,
-        voiceDistilledAt: data.persona.voiceDistilledAt,
-        voiceSampleChars: data.persona.voiceSampleChars,
-      });
-      setSamples("");
-      setEditing(false);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : tCommon("somethingWrong"));
-    } finally {
-      setPending(null);
-    }
-  }
-
-  async function clear() {
-    setErr(null);
-    setPending("clear");
-    try {
-      const res = await fetch(`${base}?projectId=${encodeURIComponent(projectId)}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(await readError(res, t("errVoiceClear")));
-      onUpdated({ ...persona, voiceProfile: null, voiceDistilledAt: null, voiceSampleChars: 0 });
-      setShowProfile(false);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : tCommon("somethingWrong"));
-    } finally {
-      setPending(null);
-    }
-  }
-
-  const linkBtn = "min-h-11 pr-3 text-xs text-neutral-600 hover:underline disabled:opacity-50 dark:text-neutral-300";
-  const busy = disabled || pending !== null;
-  const level = voiceEvidenceLevel(persona.voiceSampleChars);
-  const profileChars = persona.voiceSampleChars;
-  // Live counter level: in add mode the new text counts on top of what is already distilled.
-  const draftLevel = voiceEvidenceLevel(trimmedLen + (mode === "add" && persona.voiceProfile ? profileChars : 0));
-  const openEditor = (m: "add" | "replace") => {
-    if (editing && mode === m) {
-      setEditing(false);
-      return;
-    }
-    setMode(m);
-    setEditing(true);
-  };
-
-  return (
-    <div className="mt-1 space-y-2">
-      <div className="flex flex-wrap items-center">
-        {persona.voiceProfile ? (
-          <>
-            <span className="mr-3 text-xs text-green-700 dark:text-green-400">
-              {t("voiceDistilledOn", { date: persona.voiceDistilledAt ? persona.voiceDistilledAt.slice(0, 10) : "" })}
-              {" · "}
-              {t("voiceEvidence", { level: t(`evidence_${level}`), chars: profileChars })}
-            </span>
-            <button type="button" className={linkBtn} onClick={() => setShowProfile((v) => !v)}>
-              {showProfile ? t("hideVoiceProfile") : t("viewVoiceProfile")}
-            </button>
-            <button type="button" className={`${linkBtn} font-medium`} onClick={() => openEditor("add")} disabled={busy}>
-              {t("addMoreMessages")}
-            </button>
-            <button type="button" className={linkBtn} onClick={() => openEditor("replace")} disabled={busy}>
-              {t("reDistillVoice")}
-            </button>
-            <button type="button" className={`${linkBtn} text-red-600`} onClick={clear} disabled={busy}>
-              {t("clearVoice")}
-            </button>
-          </>
-        ) : (
-          <button type="button" className={linkBtn} onClick={() => openEditor("replace")} disabled={busy}>
-            {t("distillVoice")}
-          </button>
-        )}
-      </div>
-
-      {persona.voiceProfile && level !== "good" ? (
-        <p className="text-xs text-amber-600">{t("voiceMoreHint")}</p>
-      ) : null}
-
-      {showProfile && persona.voiceProfile ? (
-        <pre className="max-h-60 overflow-auto whitespace-pre-wrap rounded bg-neutral-50 p-3 text-xs dark:bg-neutral-900">
-          {persona.voiceProfile}
-        </pre>
-      ) : null}
-
-      {editing ? (
-        <div className="space-y-2">
-          <label className="block text-xs">
-            <span className="mb-1 block text-neutral-500">{t("voiceSamplesLabel")}</span>
-            <textarea
-              className="min-h-32 w-full rounded-md border border-neutral-300 px-3 py-2 text-base outline-none focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-950"
-              value={samples}
-              maxLength={VOICE_MAX}
-              onChange={(e) => setSamples(e.target.value)}
-              placeholder={t("voiceSamplesPlaceholder")}
-              disabled={pending !== null}
-            />
-          </label>
-          <p className="text-xs text-neutral-400">{t("voiceSamplesHelp", { min: VOICE_MIN, max: VOICE_MAX })}</p>
-          <p className="text-xs text-neutral-500">
-            {t("voiceCounter", { count: trimmedLen })}
-            {trimmedLen > 0 && draftLevel !== "good" ? ` — ${t("voiceMoreHint")}` : ""}
-          </p>
-          {tooShort ? <p className="text-xs text-amber-600">{t("voiceTooShort", { min: VOICE_MIN })}</p> : null}
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className={`${btnSecondary} min-h-11`} onClick={distill} disabled={busy || !canSubmit}>
-              {pending === "distill" ? t("distillingVoice") : t("runDistill")}
-            </button>
-            <button
-              type="button"
-              className={`${btnSecondary} min-h-11`}
-              onClick={() => {
-                setEditing(false);
-                setSamples("");
-                setErr(null);
-              }}
-              disabled={pending !== null}
-            >
-              {t("cancel")}
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {err ? <p className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/40">{err}</p> : null}
-    </div>
   );
 }
 

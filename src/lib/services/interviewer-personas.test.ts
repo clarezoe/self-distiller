@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizePersonaInput, parseDistillMode, validateVoiceSamples } from "./interviewer-personas";
+import { mergePersonaUpdate, normalizePersonaInput, parseDistillMode, validateVoiceSamples } from "./interviewer-personas";
 
 // The Prisma-backed list/create/delete are all scoped by `projectId` in their `where`/`data`
 // (the caller passes a user-owned projectId via getActiveProject/getProjectForUser), so a
@@ -68,5 +68,26 @@ describe("parseDistillMode", () => {
     expect(parseDistillMode("replace")).toEqual({ ok: true, value: "replace" });
     expect(parseDistillMode("merge").ok).toBe(false);
     expect(parseDistillMode(5).ok).toBe(false);
+  });
+});
+
+describe("mergePersonaUpdate", () => {
+  const cur = { name: "Coach", description: "warm", relationship: "mentor" };
+
+  it("keeps current values for omitted fields", () => {
+    const r = mergePersonaUpdate(cur, { description: "  blunt  " });
+    expect(r).toEqual({ ok: true, value: { name: "Coach", description: "blunt", relationship: "mentor" } });
+  });
+
+  it("clears relationship when given blank or null", () => {
+    for (const rel of ["", "  ", null]) {
+      const r = mergePersonaUpdate(cur, { relationship: rel });
+      expect(r.ok && r.value.relationship).toBe(null);
+    }
+  });
+
+  it("rejects blank name and overlong description", () => {
+    expect(mergePersonaUpdate(cur, { name: "  " }).ok).toBe(false);
+    expect(mergePersonaUpdate(cur, { description: "x".repeat(2001) }).ok).toBe(false);
   });
 });

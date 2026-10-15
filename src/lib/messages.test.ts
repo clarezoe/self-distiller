@@ -31,4 +31,17 @@ describe("messages", () => {
       expect(m.interview.interviewLanguagePlaceholder).toBeTruthy();
     }
   });
+
+  it("has personas page and nav labels in en and zh", () => {
+    expect(en.nav.personas).toBe("Personas");
+    expect(zh.nav.personas).toBe("人物");
+    for (const m of [en, zh]) {
+      for (const k of Object.keys(en.personas) as (keyof typeof en.personas)[]) {
+        expect(m.personas[k]).toBeTruthy();
+      }
+      expect(m.interview.managePersonas).toBeTruthy();
+      expect(m.interview.noSavedPersonasHint).toBeTruthy();
+    }
+    expect(Object.keys(en.personas).sort()).toEqual(Object.keys(zh.personas).sort());
+  });
 });
