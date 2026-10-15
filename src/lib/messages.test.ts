@@ -24,4 +24,11 @@ describe("messages", () => {
     }
     expect(Object.keys(en.interview).sort()).toEqual(Object.keys(zh.interview).sort());
   });
+
+  it("has interview language picker labels in en and zh", () => {
+    for (const m of [en, zh]) {
+      expect(m.interview.languageOther).toBeTruthy();
+      expect(m.interview.interviewLanguagePlaceholder).toBeTruthy();
+    }
+  });
 });

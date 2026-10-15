@@ -190,6 +190,7 @@
     "personaPlaceholder": "如 下属、亲密朋友",
     "interviewLanguage": "访谈语言（进行访谈所用的语言）",
     "interviewLanguagePlaceholder": "如 zh、en、sv",
+    "languageOther": "其他…",
     "goal": "目标（可选 — 留空则由规划器推断）",
     "goalPlaceholder": "如 我如何安慰一位觉得自己很失败的亲密朋友",
     "targetContexts": "目标情境（可选）",

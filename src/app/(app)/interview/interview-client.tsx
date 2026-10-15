@@ -2,6 +2,7 @@
 
 import { voiceEvidenceLevel } from "@/lib/prompts/persona-voice-distiller";
 import { useState, useTransition } from "react";
+import { languageLabel } from "@/lib/language-label";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
@@ -111,6 +112,8 @@ export function InterviewClient({
   const [selectedPersonaId, setSelectedPersonaId] = useState<string>("");
   const [goal, setGoal] = useState("");
   const [language, setLanguage] = useState(languageOptions[0] ?? "");
+  // "Other…" in the language select reveals a free-text input for a custom language.
+  const [customLanguage, setCustomLanguage] = useState(false);
   const [selectedContexts, setSelectedContexts] = useState<string[]>([]);
 
   const [interviewId, setInterviewId] = useState<string | null>(null);
@@ -362,16 +365,22 @@ export function InterviewClient({
             ) : null}
             <input
               className={inputCls}
-              list="persona-suggestions"
               value={persona}
               onChange={(e) => onPersonaTextChange(e.target.value)}
               placeholder={t("personaPlaceholder")}
             />
-            <datalist id="persona-suggestions">
+            <div className="mt-2 flex flex-wrap gap-2">
               {PERSONA_SUGGESTIONS.map((p) => (
-                <option key={p} value={p} />
+                <button
+                  key={p}
+                  type="button"
+                  className={`${btnSecondary} min-h-[44px]`}
+                  onClick={() => onPersonaTextChange(p)}
+                >
+                  {p}
+                </button>
               ))}
-            </datalist>
+            </div>
             {personaDescription ? (
               <p className="mt-1 text-xs text-neutral-400">{t("usingPersona")}</p>
             ) : null}
@@ -396,18 +405,34 @@ export function InterviewClient({
 
         <label className="block text-sm sm:max-w-xs">
           <span className="mb-1 block text-neutral-500">{t("interviewLanguage")}</span>
-          <input
-            className={inputCls}
-            list="interview-language-options"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            placeholder={t("interviewLanguagePlaceholder")}
-          />
-          <datalist id="interview-language-options">
+          <select
+            className={`${inputCls} min-h-[44px]`}
+            value={customLanguage ? "__other__" : language}
+            onChange={(e) => {
+              if (e.target.value === "__other__") {
+                setCustomLanguage(true);
+                setLanguage("");
+              } else {
+                setCustomLanguage(false);
+                setLanguage(e.target.value);
+              }
+            }}
+          >
             {languageOptions.map((l) => (
-              <option key={l} value={l} />
+              <option key={l} value={l}>
+                {languageLabel(l)}
+              </option>
             ))}
-          </datalist>
+            <option value="__other__">{t("languageOther")}</option>
+          </select>
+          {customLanguage ? (
+            <input
+              className={`${inputCls} mt-2 min-h-[44px]`}
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              placeholder={t("interviewLanguagePlaceholder")}
+            />
+          ) : null}
         </label>
 
         <label className="block text-sm">
