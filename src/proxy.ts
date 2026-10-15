@@ -8,6 +8,6 @@ export const config = {
   // Exclude static + PWA assets (manifest, service worker, icons) so they are
   // publicly reachable without the auth redirect — required for installability.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:js|json|webmanifest|map|svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline.html|.*\\.(?:js|json|webmanifest|map|svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
