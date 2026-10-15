@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { AppVersion } from "@/components/app-version";
 import { MobileNav } from "@/components/mobile-nav";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SidebarLink } from "@/components/sidebar-link";
@@ -76,6 +77,7 @@ export default async function AppLayout({
               {tCommon("signOut")}
             </button>
           </form>
+          <AppVersion className="px-2" />
         </div>
       </aside>
       <main className="min-w-0 flex-1 p-4 pb-[calc(5rem+env(safe-area-inset-bottom))] md:p-8">
@@ -101,6 +103,7 @@ export default async function AppLayout({
               </button>
             </form>
             <p className="px-3 pt-2 text-xs text-neutral-500">{tNav("installHelp")}</p>
+            <AppVersion className="px-3" />
           </div>
         }
       />
