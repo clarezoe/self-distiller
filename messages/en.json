@@ -190,6 +190,7 @@
     "personaPlaceholder": "e.g. subordinate, close friend",
     "interviewLanguage": "Interview language (the language the interview is conducted in)",
     "interviewLanguagePlaceholder": "e.g. zh, en, sv",
+    "languageOther": "Other…",
     "goal": "Goal (optional — planner derives one if blank)",
     "goalPlaceholder": "e.g. how I comfort a close friend who feels like a failure",
     "targetContexts": "Target context(s) (optional)",
