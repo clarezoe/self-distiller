@@ -23,3 +23,7 @@ Real conventions from the Foundation build. Match these in later phases.
 
 ## Navigation
 - The 9 sections live in `(app)/layout.tsx` `SECTIONS`. New top-level pages go under `(app)/` and get a nav entry there.
+
+## Mobile and PWA
+- Below `md`, `globals.css` forces 16px form text (prevents iOS focus zoom) and 44px min height for inputs/buttons in `main`. Keep long action rows `flex-wrap`; avoid fixed-position inputs (use normal flow + `scroll-mb-*`).
+- Service worker privacy rule: only `/_next/static/*`, fonts and `/icons/*` images are cached. Everything else (documents, RSC, `/api/**`, cross-origin) is `NetworkOnly`. Never use Serwist `defaultCache`; edit `src/lib/pwa/runtime-caching.ts` and keep its tests passing. Offline fallback is the public `public/offline.html` (must stay excluded from proxy auth).

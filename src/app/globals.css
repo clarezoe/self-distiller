@@ -29,3 +29,21 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Touch ergonomics (below md): 16px form text prevents iOS focus-zoom; 44px
+   minimum touch targets. Unlayered on purpose so it wins over utilities. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  textarea {
+    scroll-margin-bottom: 6rem;
+  }
+  main button,
+  main a[class*="rounded"] {
+    min-height: 44px;
+  }
+}
