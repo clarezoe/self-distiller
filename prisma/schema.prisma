@@ -338,6 +338,7 @@ model InterviewerPersona {
   // Speaking-style profile distilled from sample messages (raw samples are never stored).
   voiceProfile     String?
   voiceDistilledAt DateTime?
+  voiceSampleChars Int       @default(0)
   createdAt    DateTime @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

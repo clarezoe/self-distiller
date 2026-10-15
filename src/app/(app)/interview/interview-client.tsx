@@ -1,5 +1,6 @@
 "use client";
 
+import { voiceEvidenceLevel } from "@/lib/prompts/persona-voice-distiller";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -33,6 +34,7 @@ type Persona = {
   relationship: string | null;
   voiceProfile: string | null;
   voiceDistilledAt: string | null;
+  voiceSampleChars: number;
 };
 
 const VOICE_MIN = 200;
@@ -750,6 +752,7 @@ function VoiceControls({
   const [editing, setEditing] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [samples, setSamples] = useState("");
+  const [mode, setMode] = useState<"add" | "replace">("replace");
   const [pending, setPending] = useState<null | "distill" | "clear">(null);
   const [err, setErr] = useState<string | null>(null);
   const trimmedLen = samples.trim().length;
@@ -764,11 +767,16 @@ function VoiceControls({
       const res = await fetch(base, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, samples }),
+        body: JSON.stringify({ projectId, samples, mode }),
       });
       if (!res.ok) throw new Error(await readError(res, t("errVoiceDistill")));
       const data = (await res.json()) as { persona: Persona };
-      onUpdated({ ...persona, voiceProfile: data.persona.voiceProfile, voiceDistilledAt: data.persona.voiceDistilledAt });
+      onUpdated({
+        ...persona,
+        voiceProfile: data.persona.voiceProfile,
+        voiceDistilledAt: data.persona.voiceDistilledAt,
+        voiceSampleChars: data.persona.voiceSampleChars,
+      });
       setSamples("");
       setEditing(false);
     } catch (e) {
@@ -784,7 +792,7 @@ function VoiceControls({
     try {
       const res = await fetch(`${base}?projectId=${encodeURIComponent(projectId)}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await readError(res, t("errVoiceClear")));
-      onUpdated({ ...persona, voiceProfile: null, voiceDistilledAt: null });
+      onUpdated({ ...persona, voiceProfile: null, voiceDistilledAt: null, voiceSampleChars: 0 });
       setShowProfile(false);
     } catch (e) {
       setErr(e instanceof Error ? e.message : tCommon("somethingWrong"));
@@ -795,6 +803,18 @@ function VoiceControls({
 
   const linkBtn = "min-h-11 pr-3 text-xs text-neutral-600 hover:underline disabled:opacity-50 dark:text-neutral-300";
   const busy = disabled || pending !== null;
+  const level = voiceEvidenceLevel(persona.voiceSampleChars);
+  const profileChars = persona.voiceSampleChars;
+  // Live counter level: in add mode the new text counts on top of what is already distilled.
+  const draftLevel = voiceEvidenceLevel(trimmedLen + (mode === "add" && persona.voiceProfile ? profileChars : 0));
+  const openEditor = (m: "add" | "replace") => {
+    if (editing && mode === m) {
+      setEditing(false);
+      return;
+    }
+    setMode(m);
+    setEditing(true);
+  };
 
   return (
     <div className="mt-1 space-y-2">
@@ -803,11 +823,16 @@ function VoiceControls({
           <>
             <span className="mr-3 text-xs text-green-700 dark:text-green-400">
               {t("voiceDistilledOn", { date: persona.voiceDistilledAt ? persona.voiceDistilledAt.slice(0, 10) : "" })}
+              {" · "}
+              {t("voiceEvidence", { level: t(`evidence_${level}`), chars: profileChars })}
             </span>
             <button type="button" className={linkBtn} onClick={() => setShowProfile((v) => !v)}>
               {showProfile ? t("hideVoiceProfile") : t("viewVoiceProfile")}
             </button>
-            <button type="button" className={linkBtn} onClick={() => setEditing((v) => !v)} disabled={busy}>
+            <button type="button" className={`${linkBtn} font-medium`} onClick={() => openEditor("add")} disabled={busy}>
+              {t("addMoreMessages")}
+            </button>
+            <button type="button" className={linkBtn} onClick={() => openEditor("replace")} disabled={busy}>
               {t("reDistillVoice")}
             </button>
             <button type="button" className={`${linkBtn} text-red-600`} onClick={clear} disabled={busy}>
@@ -815,11 +840,15 @@ function VoiceControls({
             </button>
           </>
         ) : (
-          <button type="button" className={linkBtn} onClick={() => setEditing((v) => !v)} disabled={busy}>
+          <button type="button" className={linkBtn} onClick={() => openEditor("replace")} disabled={busy}>
             {t("distillVoice")}
           </button>
         )}
       </div>
+
+      {persona.voiceProfile && level !== "good" ? (
+        <p className="text-xs text-amber-600">{t("voiceMoreHint")}</p>
+      ) : null}
 
       {showProfile && persona.voiceProfile ? (
         <pre className="max-h-60 overflow-auto whitespace-pre-wrap rounded bg-neutral-50 p-3 text-xs dark:bg-neutral-900">
@@ -841,6 +870,10 @@ function VoiceControls({
             />
           </label>
           <p className="text-xs text-neutral-400">{t("voiceSamplesHelp", { min: VOICE_MIN, max: VOICE_MAX })}</p>
+          <p className="text-xs text-neutral-500">
+            {t("voiceCounter", { count: trimmedLen })}
+            {trimmedLen > 0 && draftLevel !== "good" ? ` — ${t("voiceMoreHint")}` : ""}
+          </p>
           {tooShort ? <p className="text-xs text-amber-600">{t("voiceTooShort", { min: VOICE_MIN })}</p> : null}
           <div className="flex flex-wrap gap-2">
             <button type="button" className={`${btnSecondary} min-h-11`} onClick={distill} disabled={busy || !canSubmit}>

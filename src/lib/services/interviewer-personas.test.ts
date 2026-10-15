@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizePersonaInput, validateVoiceSamples } from "./interviewer-personas";
+import { normalizePersonaInput, parseDistillMode, validateVoiceSamples } from "./interviewer-personas";
 
 // The Prisma-backed list/create/delete are all scoped by `projectId` in their `where`/`data`
 // (the caller passes a user-owned projectId via getActiveProject/getProjectForUser), so a
@@ -58,5 +58,15 @@ describe("validateVoiceSamples", () => {
     const r = validateVoiceSamples("  " + "x".repeat(200) + "  ");
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value).toBe("x".repeat(200));
+  });
+});
+
+describe("parseDistillMode", () => {
+  it("defaults to replace and validates", () => {
+    expect(parseDistillMode(undefined)).toEqual({ ok: true, value: "replace" });
+    expect(parseDistillMode("add")).toEqual({ ok: true, value: "add" });
+    expect(parseDistillMode("replace")).toEqual({ ok: true, value: "replace" });
+    expect(parseDistillMode("merge").ok).toBe(false);
+    expect(parseDistillMode(5).ok).toBe(false);
   });
 });

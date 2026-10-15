@@ -72,15 +72,28 @@ export function validateVoiceSamples(samples: unknown): { ok: true; value: strin
   return { ok: true, value };
 }
 
+export type DistillMode = "replace" | "add";
+
+// Pure: validate the optional distill mode. Undefined/null defaults to "replace".
+export function parseDistillMode(mode: unknown): { ok: true; value: DistillMode } | { ok: false; error: string } {
+  if (mode === undefined || mode === null) return { ok: true, value: "replace" };
+  if (mode === "replace" || mode === "add") return { ok: true, value: mode };
+  return { ok: false, error: 'mode must be "replace" or "add".' };
+}
+
 // Distill the persona's speaking style from pasted messages (LLM) and store ONLY the
 // resulting profile. Raw samples are never persisted: not on the persona, and the LLM call
 // log request is redacted. Scoped by projectId (caller passes a user-owned project).
-export async function distillPersonaVoice(projectId: string, personaId: string, samples: string, userId: string) {
+export async function distillPersonaVoice(projectId: string, personaId: string, samples: string, userId: string, mode: DistillMode = "replace") {
   const validated = validateVoiceSamples(samples);
   if (!validated.ok) throw new Error(validated.error);
 
   const persona = await prisma.interviewerPersona.findFirst({ where: { id: personaId, projectId } });
   if (!persona) throw new Error("Persona not found");
+
+  // add mode merges into the existing profile; with no existing profile it behaves like replace.
+  const existingProfile = mode === "add" ? persona.voiceProfile?.trim() || null : null;
+  const merging = existingProfile !== null;
 
   const result = await runAgent<PersonaVoice>({
     userId,
@@ -91,6 +104,7 @@ export async function distillPersonaVoice(projectId: string, personaId: string, 
       relationship: persona.relationship,
       description: persona.description,
       samples: validated.value,
+      existingProfile,
     }),
     schema: { name: "persona_voice", schema: PERSONA_VOICE_SCHEMA },
     redactRequest: true,
@@ -103,7 +117,12 @@ export async function distillPersonaVoice(projectId: string, personaId: string, 
 
   const updated = await prisma.interviewerPersona.updateMany({
     where: { id: personaId, projectId },
-    data: { voiceProfile, voiceDistilledAt: new Date() },
+    data: {
+      voiceProfile,
+      voiceDistilledAt: new Date(),
+      // Only the count is stored, never the text.
+      voiceSampleChars: merging ? persona.voiceSampleChars + validated.value.length : validated.value.length,
+    },
   });
   if (updated.count === 0) throw new Error("Persona not found");
   return prisma.interviewerPersona.findFirstOrThrow({ where: { id: personaId, projectId } });
@@ -113,7 +132,7 @@ export async function distillPersonaVoice(projectId: string, personaId: string, 
 export async function clearPersonaVoice(projectId: string, personaId: string) {
   const r = await prisma.interviewerPersona.updateMany({
     where: { id: personaId, projectId },
-    data: { voiceProfile: null, voiceDistilledAt: null },
+    data: { voiceProfile: null, voiceDistilledAt: null, voiceSampleChars: 0 },
   });
   if (r.count === 0) throw new Error("Persona not found");
   return prisma.interviewerPersona.findFirstOrThrow({ where: { id: personaId, projectId } });
