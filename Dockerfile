@@ -18,7 +18,16 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm prisma generate
-RUN pnpm build
+# Version label: git is only needed at build time (runner image has no .git).
+# GIT_SHA / GIT_DATE build args override; otherwise resolve from the checkout.
+# Never fail the build: fall back to "unknown".
+ARG GIT_SHA=""
+ARG GIT_DATE=""
+RUN apk add --no-cache git
+RUN export NEXT_PUBLIC_GIT_SHA="${GIT_SHA:-$(git -c safe.directory=/app rev-parse --short=7 HEAD 2>/dev/null || true)}" \
+ && export NEXT_PUBLIC_GIT_DATE="${GIT_DATE:-$(git -c safe.directory=/app log -1 --format=%cd --date=short 2>/dev/null || true)}" \
+ && export NEXT_PUBLIC_GIT_SHA="${NEXT_PUBLIC_GIT_SHA:-unknown}" \
+ && pnpm build
 
 # Minimal standalone runtime.
 FROM base AS runner

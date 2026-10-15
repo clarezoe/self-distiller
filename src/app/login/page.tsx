@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { AuthError } from "next-auth";
+import { AppVersion } from "@/components/app-version";
 import { signIn } from "@/lib/auth";
 
 export default async function LoginPage({
@@ -66,6 +67,7 @@ export default async function LoginPage({
         </button>
         <p className="text-xs text-neutral-400">{t("magicHint")}</p>
       </form>
+      <AppVersion className="fixed inset-x-0 bottom-3 text-center" />
     </main>
   );
 }
