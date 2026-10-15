@@ -11,7 +11,7 @@ function isActive(pathname: string, href: string) {
 }
 
 const tabBase =
-  "flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 px-1 text-xs font-medium";
+  "flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 whitespace-nowrap text-xs font-medium";
 
 // Fixed bottom tab bar (below md). The first tab is the primary action (interview).
 // `moreSlot` is server-rendered content (user email + sign-out form) shown in the sheet.
@@ -104,7 +104,7 @@ export function MobileNav({
           aria-current={primaryActive ? "page" : undefined}
           className={`${tabBase} mx-1 my-1 rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 ${primaryActive ? "ring-2 ring-neutral-400" : ""}`}
         >
-          {primary.label}
+          <span className="max-w-full truncate">{primary.label}</span>
         </Link>
         {tabs.map((t) => {
           const active = isActive(pathname, t.href);
@@ -115,7 +115,7 @@ export function MobileNav({
               aria-current={active ? "page" : undefined}
               className={`${tabBase} ${active ? "text-neutral-900 dark:text-white" : "text-neutral-500"} ${active ? "border-t-2 border-neutral-900 dark:border-white" : "border-t-2 border-transparent"}`}
             >
-              {t.label}
+              <span className="max-w-full truncate">{t.label}</span>
             </Link>
           );
         })}
@@ -128,7 +128,7 @@ export function MobileNav({
           onClick={() => setOpen((o) => !o)}
           className={`${tabBase} ${moreActive || open ? "text-neutral-900 dark:text-white" : "text-neutral-500"} border-t-2 ${moreActive ? "border-neutral-900 dark:border-white" : "border-transparent"}`}
         >
-          {moreLabel}
+          <span className="max-w-full truncate">{moreLabel}</span>
         </button>
       </nav>
     </>

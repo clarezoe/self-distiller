@@ -51,7 +51,7 @@ export default async function ImportPage() {
         ) : (
           <ul className="space-y-2 text-sm">
             {materials.map((m) => (
-              <li key={m.id} className="flex items-center gap-2">
+              <li key={m.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
                   {m.sourceType}
                 </span>

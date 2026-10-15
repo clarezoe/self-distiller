@@ -55,7 +55,7 @@ export default async function TasksPage() {
         ) : (
           <ul className="space-y-2 text-sm">
             {past.slice(0, 20).map((task) => (
-              <li key={task.id} className="flex items-center gap-2">
+              <li key={task.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-500 dark:bg-neutral-800">
                   {typeLabel(task.taskType)}
                 </span>

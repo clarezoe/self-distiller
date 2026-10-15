@@ -76,7 +76,7 @@ export default async function AppLayout({
         {children}
       </main>
       <MobileNav
-        primary={labelOf(MOBILE_PRIMARY)}
+        primary={{ ...labelOf(MOBILE_PRIMARY), label: tNav("interviewShort") }}
         tabs={MOBILE_TABS.map(labelOf)}
         more={moreItems}
         moreLabel={tNav("more")}

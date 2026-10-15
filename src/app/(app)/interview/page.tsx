@@ -59,11 +59,11 @@ export default async function InterviewPage() {
         ) : (
           <ul className="space-y-2 text-sm">
             {interviews.map((i) => (
-              <li key={i.id} className="flex items-center gap-2">
+              <li key={i.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
                   {i.type}
                 </span>
-                <span className="text-xs text-neutral-400">{i.interviewerPersona}</span>
+                <span className="min-w-0 break-words text-xs text-neutral-400">{i.interviewerPersona}</span>
                 {i.language ? (
                   <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
                     {i.language}
