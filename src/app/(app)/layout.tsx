@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { MobileNav } from "@/components/mobile-nav";
+import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SidebarLink } from "@/components/sidebar-link";
 import { getCurrentUser, signOut } from "@/lib/auth";
 
@@ -49,6 +50,11 @@ export default async function AppLayout({
       <header className="sticky top-0 z-30 flex min-h-12 shrink-0 items-center border-b border-neutral-200 bg-white/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:hidden dark:border-neutral-800 dark:bg-neutral-950/95">
         <p className="text-sm font-semibold">{tCommon("appName")}</p>
       </header>
+      <PullToRefresh
+        pullLabel={tNav("pullToRefresh")}
+        releaseLabel={tNav("releaseToRefresh")}
+        refreshingLabel={tNav("refreshing")}
+      />
       <aside className="hidden w-60 shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 p-4 md:flex dark:border-neutral-800 dark:bg-neutral-950">
         <div className="px-2 pb-4">
           <p className="text-sm font-semibold">{tCommon("appName")}</p>

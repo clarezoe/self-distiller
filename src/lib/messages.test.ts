@@ -7,4 +7,12 @@ describe("messages", () => {
     expect(en.nav.interviewShort).toBe("Interview");
     expect(zh.nav.interviewShort).toBe("访谈");
   });
+
+  it("has pull-to-refresh labels in en and zh", () => {
+    for (const m of [en, zh]) {
+      expect(m.nav.pullToRefresh).toBeTruthy();
+      expect(m.nav.releaseToRefresh).toBeTruthy();
+      expect(m.nav.refreshing).toBeTruthy();
+    }
+  });
 });
