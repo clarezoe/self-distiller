@@ -26,7 +26,17 @@ const PERSONA_SUGGESTIONS = [
 ];
 
 type ContextOption = { id: string; type: string; name: string };
-type Persona = { id: string; name: string; description: string; relationship: string | null };
+type Persona = {
+  id: string;
+  name: string;
+  description: string;
+  relationship: string | null;
+  voiceProfile: string | null;
+  voiceDistilledAt: string | null;
+};
+
+const VOICE_MIN = 200;
+const VOICE_MAX = 20000;
 type Turn = { speaker: "agent" | "user"; text: string; timestamp: string };
 type PlannedTurn = { text: string; purpose: string };
 
@@ -210,6 +220,7 @@ export function InterviewClient({
           type,
           interviewerPersona: persona,
           interviewerPersonaDescription: personaDescription || undefined,
+          interviewerPersonaId: selectedPersonaId || undefined,
           targetContextIds: selectedContexts,
           language: language.trim() || undefined,
           goal: goal || undefined,
@@ -375,6 +386,8 @@ export function InterviewClient({
           onRelationship={setNewRelationship}
           onAdd={addPersona}
           onRemove={removePersona}
+          onUpdated={(p) => setPersonas((prev) => prev.map((x) => (x.id === p.id ? p : x)))}
+          projectId={projectId}
           busy={busy === "persona"}
           error={personaError}
         />
@@ -613,6 +626,8 @@ function PersonaManager({
   onRelationship,
   onAdd,
   onRemove,
+  onUpdated,
+  projectId,
   busy,
   error,
 }: {
@@ -625,6 +640,8 @@ function PersonaManager({
   onRelationship: (v: string) => void;
   onAdd: () => void;
   onRemove: (id: string) => void;
+  onUpdated: (p: Persona) => void;
+  projectId: string;
   busy: boolean;
   error: string | null;
 }) {
@@ -659,10 +676,11 @@ function PersonaManager({
                       ) : null}
                     </p>
                     <p className="text-xs text-neutral-500">{p.description}</p>
+                    <VoiceControls persona={p} projectId={projectId} onUpdated={onUpdated} disabled={busy} />
                   </div>
                   <button
                     type="button"
-                    className="shrink-0 text-xs text-red-600 hover:underline disabled:opacity-50"
+                    className="min-h-11 shrink-0 px-2 text-xs text-red-600 hover:underline disabled:opacity-50"
                     onClick={() => onRemove(p.id)}
                     disabled={busy}
                   >
@@ -710,6 +728,141 @@ function PersonaManager({
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// Per-persona voice distillation (GitHub #15). Samples live only in this component's state
+// for the duration of the request; they are never stored client- or server-side.
+function VoiceControls({
+  persona,
+  projectId,
+  onUpdated,
+  disabled,
+}: {
+  persona: Persona;
+  projectId: string;
+  onUpdated: (p: Persona) => void;
+  disabled: boolean;
+}) {
+  const t = useTranslations("interview");
+  const tCommon = useTranslations("common");
+  const [editing, setEditing] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [samples, setSamples] = useState("");
+  const [pending, setPending] = useState<null | "distill" | "clear">(null);
+  const [err, setErr] = useState<string | null>(null);
+  const trimmedLen = samples.trim().length;
+  const tooShort = trimmedLen > 0 && trimmedLen < VOICE_MIN;
+  const canSubmit = trimmedLen >= VOICE_MIN && trimmedLen <= VOICE_MAX;
+  const base = `/api/interviewer-personas/${persona.id}/distill`;
+
+  async function distill() {
+    setErr(null);
+    setPending("distill");
+    try {
+      const res = await fetch(base, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, samples }),
+      });
+      if (!res.ok) throw new Error(await readError(res, t("errVoiceDistill")));
+      const data = (await res.json()) as { persona: Persona };
+      onUpdated({ ...persona, voiceProfile: data.persona.voiceProfile, voiceDistilledAt: data.persona.voiceDistilledAt });
+      setSamples("");
+      setEditing(false);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : tCommon("somethingWrong"));
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function clear() {
+    setErr(null);
+    setPending("clear");
+    try {
+      const res = await fetch(`${base}?projectId=${encodeURIComponent(projectId)}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(await readError(res, t("errVoiceClear")));
+      onUpdated({ ...persona, voiceProfile: null, voiceDistilledAt: null });
+      setShowProfile(false);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : tCommon("somethingWrong"));
+    } finally {
+      setPending(null);
+    }
+  }
+
+  const linkBtn = "min-h-11 pr-3 text-xs text-neutral-600 hover:underline disabled:opacity-50 dark:text-neutral-300";
+  const busy = disabled || pending !== null;
+
+  return (
+    <div className="mt-1 space-y-2">
+      <div className="flex flex-wrap items-center">
+        {persona.voiceProfile ? (
+          <>
+            <span className="mr-3 text-xs text-green-700 dark:text-green-400">
+              {t("voiceDistilledOn", { date: persona.voiceDistilledAt ? persona.voiceDistilledAt.slice(0, 10) : "" })}
+            </span>
+            <button type="button" className={linkBtn} onClick={() => setShowProfile((v) => !v)}>
+              {showProfile ? t("hideVoiceProfile") : t("viewVoiceProfile")}
+            </button>
+            <button type="button" className={linkBtn} onClick={() => setEditing((v) => !v)} disabled={busy}>
+              {t("reDistillVoice")}
+            </button>
+            <button type="button" className={`${linkBtn} text-red-600`} onClick={clear} disabled={busy}>
+              {t("clearVoice")}
+            </button>
+          </>
+        ) : (
+          <button type="button" className={linkBtn} onClick={() => setEditing((v) => !v)} disabled={busy}>
+            {t("distillVoice")}
+          </button>
+        )}
+      </div>
+
+      {showProfile && persona.voiceProfile ? (
+        <pre className="max-h-60 overflow-auto whitespace-pre-wrap rounded bg-neutral-50 p-3 text-xs dark:bg-neutral-900">
+          {persona.voiceProfile}
+        </pre>
+      ) : null}
+
+      {editing ? (
+        <div className="space-y-2">
+          <label className="block text-xs">
+            <span className="mb-1 block text-neutral-500">{t("voiceSamplesLabel")}</span>
+            <textarea
+              className="min-h-32 w-full rounded-md border border-neutral-300 px-3 py-2 text-base outline-none focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-950"
+              value={samples}
+              maxLength={VOICE_MAX}
+              onChange={(e) => setSamples(e.target.value)}
+              placeholder={t("voiceSamplesPlaceholder")}
+              disabled={pending !== null}
+            />
+          </label>
+          <p className="text-xs text-neutral-400">{t("voiceSamplesHelp", { min: VOICE_MIN, max: VOICE_MAX })}</p>
+          {tooShort ? <p className="text-xs text-amber-600">{t("voiceTooShort", { min: VOICE_MIN })}</p> : null}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={`${btnSecondary} min-h-11`} onClick={distill} disabled={busy || !canSubmit}>
+              {pending === "distill" ? t("distillingVoice") : t("runDistill")}
+            </button>
+            <button
+              type="button"
+              className={`${btnSecondary} min-h-11`}
+              onClick={() => {
+                setEditing(false);
+                setSamples("");
+                setErr(null);
+              }}
+              disabled={pending !== null}
+            >
+              {t("cancel")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {err ? <p className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/40">{err}</p> : null}
     </div>
   );
 }

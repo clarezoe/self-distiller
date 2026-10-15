@@ -239,7 +239,22 @@
     "savingPersona": "保存中…",
     "deletePersona": "删除",
     "errPersonaCreate": "保存人设失败",
-    "errPersonaDelete": "删除人设失败"
+    "errPersonaDelete": "删除人设失败",
+    "distillVoice": "蒸馏说话风格",
+    "reDistillVoice": "重新蒸馏",
+    "clearVoice": "清除风格",
+    "voiceDistilledOn": "已于 {date} 蒸馏说话风格",
+    "viewVoiceProfile": "查看风格档案",
+    "hideVoiceProfile": "收起档案",
+    "voiceSamplesLabel": "粘贴这个人发给你的消息（只要他/她说的话）",
+    "voiceSamplesHelp": "样本仅用于一次性生成风格档案，不会被保存。可随时重新粘贴以重新蒸馏。{min}-{max} 个字符。",
+    "voiceSamplesPlaceholder": "在此粘贴对方的消息…",
+    "distillingVoice": "蒸馏中…",
+    "runDistill": "开始蒸馏",
+    "cancel": "取消",
+    "errVoiceDistill": "蒸馏说话风格失败",
+    "errVoiceClear": "清除说话风格失败",
+    "voiceTooShort": "请至少粘贴 {min} 个字符，以保证有足够的信息。"
   },
   "calibration": {
     "title": "校准",

@@ -74,6 +74,9 @@ export function buildInterviewPlannerMessages(input: {
   // Rich, user-authored persona background (GitHub #8 v1). When present, the planner stays
   // fully in this persona's voice; when absent, only the persona NAME shapes the voice.
   interviewerPersonaDescription?: string;
+  // Speaking-style profile distilled from the persona's own messages (GitHub #15). When present,
+  // every interviewer turn must match it.
+  interviewerVoiceProfile?: string;
   goal?: string;
   targetContexts?: string[];
   modelSubset?: PlannerSelfModelSubset;
@@ -110,6 +113,11 @@ export function buildInterviewPlannerMessages(input: {
     ? `Interviewer persona: ${input.interviewerPersona} — ${personaDescription}\nStay FULLY in character as this specific person: match their tone, vocabulary, directness, warmth/coldness, and exactly how they would push the user. Every turn must sound like THEM, not a neutral interviewer.`
     : `Interviewer persona: ${input.interviewerPersona}`;
 
+  const voiceProfile = input.interviewerVoiceProfile?.trim();
+  const voiceBlock = voiceProfile
+    ? `Interviewer's real speaking style (distilled from messages this person actually wrote):\n${voiceProfile}\nEvery interviewer turn MUST match this style: wording, message length, punctuation, emoji use, and language mix. Do not copy the example lines verbatim, and still follow the sampling rules above.`
+    : null;
+
   return [
     { role: "system", content: SYSTEM },
     {
@@ -117,6 +125,7 @@ export function buildInterviewPlannerMessages(input: {
       content: [
         `Interview type: ${input.type} — ${typeHint}`,
         personaBlock,
+        voiceBlock,
         languageBlock,
         input.goal ? `Requested goal: ${input.goal}` : "No explicit goal given — derive one concrete sampling goal.",
         contextBlock,

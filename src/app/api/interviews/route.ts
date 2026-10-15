@@ -12,6 +12,8 @@ const createSchema = z.object({
   interviewerPersona: z.string().min(1),
   // Optional rich background for a saved/named persona (GitHub #8 v1); threads into the planner voice.
   interviewerPersonaDescription: z.string().max(2000).optional(),
+  // Saved persona id; its distilled voice profile (if any) is applied server-side, scoped to the project.
+  interviewerPersonaId: z.string().min(1).optional(),
   targetContextIds: z.array(z.string().min(1)).optional(),
   // Language the interview is CONDUCTED in (zh/en/sv/... or a free label). Independent of UI locale.
   language: z.string().min(1).max(64).optional(),
@@ -42,6 +44,7 @@ export async function POST(request: Request) {
       type: parsed.data.type as InterviewType,
       interviewerPersona: parsed.data.interviewerPersona,
       interviewerPersonaDescription: parsed.data.interviewerPersonaDescription,
+      interviewerPersonaId: parsed.data.interviewerPersonaId,
       targetContextIds: parsed.data.targetContextIds,
       language: parsed.data.language,
       goal: parsed.data.goal,

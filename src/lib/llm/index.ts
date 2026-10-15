@@ -44,6 +44,9 @@ export type RunAgentArgs = {
   maxTokens?: number;
   providerOverride?: Provider;
   modelOverride?: string;
+  // When true, the request messages are NOT written to LlmCallLog (for private third-party
+  // text such as persona voice samples). The call itself is still logged.
+  redactRequest?: boolean;
 };
 
 // Resolve provider/model per D6 (override → user default → fallback), call the adapter,
@@ -84,7 +87,11 @@ export async function runAgent<T = unknown>(
           agentRole: args.agentRole,
           provider,
           model,
-          request: toJson({ messages: args.messages, schema: args.schema?.name }),
+          request: toJson(
+            args.redactRequest
+              ? { messages: "[redacted]", schema: args.schema?.name }
+              : { messages: args.messages, schema: args.schema?.name },
+          ),
           rawResponse: result ? toJson(result.raw) : Prisma.JsonNull,
           parsedResponse: result ? toJson(result.parsed) : Prisma.JsonNull,
           error,
