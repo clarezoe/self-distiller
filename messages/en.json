@@ -206,8 +206,6 @@
     "sendReply": "Send reply",
     "extracting": "Extracting report…",
     "endAndExtract": "End interview & extract",
-    "next": "Next: {purpose}",
-    "allTurnsUsed": "All planned turns used — extract when ready.",
     "extractionReport": "Extraction report",
     "tonePatterns": "Tone patterns",
     "reactionPatterns": "Reaction patterns",
@@ -255,7 +253,12 @@
     "voiceMoreHint": "Add more of their messages for a more accurate voice. 2000+ characters (about 30+ messages) works well.",
     "voiceCounter": "{count} characters",
     "managePersonas": "Manage personas",
-    "noSavedPersonasHint": "No saved personas yet. Create one in Personas to role-play a specific person."
+    "noSavedPersonasHint": "No saved personas yet. Create one in Personas to role-play a specific person.",
+    "typing": "{persona} is typing…",
+    "retry": "Retry",
+    "errFailedReply": "The interviewer couldn't reply. Your message was saved — retry.",
+    "goalReached": "The interview reached its goal. You can extract now, or keep replying.",
+    "interviewPlan": "Interview plan"
   },
   "calibration": {
     "title": "Calibration",

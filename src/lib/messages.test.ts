@@ -44,4 +44,12 @@ describe("messages", () => {
     }
     expect(Object.keys(en.personas).sort()).toEqual(Object.keys(zh.personas).sort());
   });
+
+  it("has contextual interview turn labels in en and zh", () => {
+    for (const m of [en, zh]) {
+      for (const k of ["typing", "retry", "errFailedReply", "goalReached", "interviewPlan"] as const) {
+        expect(m.interview[k]).toBeTruthy();
+      }
+    }
+  });
 });

@@ -318,6 +318,10 @@ model Interview {
   goal               String
   transcript         Json          @default("[]") // [{ speaker, text, timestamp }]
   extractionReport   Json?
+  // Planner output { turns, expected_signals, interviewer_persona }; a GUIDE for contextual next turns.
+  plan                           Json?
+  interviewerPersonaDescription  String?
+  interviewerPersonaId           String? // no FK; voice profile looked up scoped by projectId at turn time
   createdAt          DateTime      @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

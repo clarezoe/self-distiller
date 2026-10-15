@@ -13,6 +13,7 @@ export const AGENT_ROLES = [
   "import_analyzer",
   "self_model_generator",
   "interview_planner",
+  "interview_turn",
   "persona_voice_distiller",
   "interview_extractor",
   "blind_hidden",

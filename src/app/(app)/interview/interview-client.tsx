@@ -122,6 +122,10 @@ export function InterviewClient({
   const [report, setReport] = useState<ExtractionReport | null>(null);
 
   const [busy, setBusy] = useState<null | "start" | "send" | "extract" | "apply">(null);
+  // The user's reply is saved but the interviewer's answer failed; Retry calls /next.
+  const [needsRetry, setNeedsRetry] = useState(false);
+  // The interviewer signalled the goal is reached (user may still reply or extract).
+  const [reachedGoal, setReachedGoal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -145,10 +149,6 @@ export function InterviewClient({
     setSelectedPersonaId("");
     setPersonaDescription(undefined);
   }
-
-  // The next un-asked planned interviewer turn (turn 0 is seeded at start).
-  const askedAgentTurns = transcript.filter((t) => t.speaker === "agent").length;
-  const nextPlanned = plannedTurns[askedAgentTurns] ?? null;
 
   function toggleContext(id: string) {
     setSelectedContexts((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -182,6 +182,8 @@ export function InterviewClient({
       setExpectedSignals(data.expectedSignals ?? []);
       setTranscript(data.transcript);
       setReport(null);
+      setNeedsRetry(false);
+      setReachedGoal(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : tCommon("somethingWrong"));
     } finally {
@@ -189,35 +191,42 @@ export function InterviewClient({
     }
   }
 
-  async function appendTurn(speaker: "agent" | "user", text: string) {
+  // Calls /reply (save user turn + generate next) or /next (retry: generate only).
+  async function requestTurn(path: "reply" | "next", text?: string) {
     if (!interviewId) return;
-    const res = await fetch(`/api/interviews/${interviewId}/turn`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ speaker, text }),
-    });
-    if (!res.ok) throw new Error(await readError(res, t("errFailedTurn")));
-    const data = (await res.json()) as { transcript: Turn[] };
-    setTranscript(data.transcript);
-  }
-
-  async function sendReply() {
-    if (!reply.trim() || !interviewId) return;
     setError(null);
+    setNeedsRetry(false);
     setBusy("send");
-    try {
-      // Persist the user's reply, then advance the interviewer with the next planned turn.
-      await appendTurn("user", reply.trim());
+    if (path === "reply" && text) {
+      // Optimistic: show the user's message immediately.
+      setTranscript((prev) => [...prev, { speaker: "user", text, timestamp: new Date().toISOString() }]);
       setReply("");
-      const upcoming = plannedTurns[askedAgentTurns + 1] ?? null;
-      if (upcoming) {
-        await appendTurn("agent", upcoming.text);
+    }
+    try {
+      const res = await fetch(`/api/interviews/${interviewId}/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: path === "reply" ? JSON.stringify({ text }) : undefined,
+      });
+      if (!res.ok) {
+        // 502: the user turn is saved server-side; only the interviewer's answer is missing.
+        if (res.status === 502) setNeedsRetry(true);
+        throw new Error(await readError(res, t("errFailedReply")));
       }
+      const data = (await res.json()) as { transcript: Turn[]; done: boolean };
+      setTranscript(data.transcript);
+      if (data.done) setReachedGoal(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : tCommon("somethingWrong"));
     } finally {
       setBusy(null);
     }
+  }
+
+  function sendReply() {
+    const text = reply.trim();
+    if (!text) return;
+    void requestTurn("reply", text);
   }
 
   async function extract() {
@@ -267,6 +276,8 @@ export function InterviewClient({
     setReport(null);
     setError(null);
     setDone(null);
+    setNeedsRetry(false);
+    setReachedGoal(false);
   }
 
   // ---- Setup view (no interview started) ----
@@ -453,7 +464,29 @@ export function InterviewClient({
               {turn.text}
             </div>
           ))}
+          {busy === "send" ? (
+            <div className="max-w-[85%] rounded-lg bg-neutral-100 px-3 py-2 text-sm text-neutral-500 dark:bg-neutral-800">
+              {t("typing", { persona })}
+            </div>
+          ) : null}
         </div>
+
+        {plannedTurns.length > 0 ? (
+          <details className="text-xs text-neutral-400">
+            <summary className="cursor-pointer">{t("interviewPlan")}</summary>
+            <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+              {plannedTurns.map((p, i) => (
+                <li key={i}>{p.purpose}</li>
+              ))}
+            </ol>
+          </details>
+        ) : null}
+
+        {reachedGoal ? (
+          <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950/40">
+            {t("goalReached")}
+          </p>
+        ) : null}
 
         {!report ? (
           <div className="space-y-2">
@@ -470,11 +503,11 @@ export function InterviewClient({
               <button className={btnSecondary} onClick={extract} disabled={busy !== null || transcript.length < 2}>
                 {busy === "extract" ? t("extracting") : t("endAndExtract")}
               </button>
-              {nextPlanned ? (
-                <span className="text-xs text-neutral-400">{t("next", { purpose: nextPlanned.purpose })}</span>
-              ) : (
-                <span className="text-xs text-neutral-400">{t("allTurnsUsed")}</span>
-              )}
+              {needsRetry ? (
+                <button className={btnSecondary} onClick={() => void requestTurn("next")} disabled={busy !== null}>
+                  {t("retry")}
+                </button>
+              ) : null}
             </div>
           </div>
         ) : null}
