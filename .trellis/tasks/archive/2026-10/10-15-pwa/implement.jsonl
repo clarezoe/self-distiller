@@ -1,0 +1,5 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/tasks/10-15-pwa/prd.md", "reason": "requirements and Jev decisions"}
+{"file": ".trellis/tasks/10-15-pwa/research/mobile-pwa.md", "reason": "PWA, safe-area, keyboard research, cache risk, file lines"}
+{"file": ".trellis/tasks/10-15-pwa/../../spec/frontend/directory-structure.md", "reason": "app shell and nav conventions"}
+{"file": ".trellis/tasks/10-15-pwa/../../spec/frontend/component-guidelines.md", "reason": "component and styling patterns"}
