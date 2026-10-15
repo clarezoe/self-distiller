@@ -54,6 +54,33 @@ export function createPersona(projectId: string, input: PersonaInput) {
   });
 }
 
+export type PersonaPatch = { name?: string; description?: string; relationship?: string | null };
+
+// Pure: merge a partial update over the current persona values, then validate with the
+// same rules as create. A provided empty relationship clears it; undefined keeps it.
+export function mergePersonaUpdate(
+  current: { name: string; description: string; relationship: string | null },
+  patch: PersonaPatch,
+) {
+  return normalizePersonaInput({
+    name: patch.name !== undefined ? patch.name : current.name,
+    description: patch.description !== undefined ? patch.description : current.description,
+    relationship: patch.relationship !== undefined ? patch.relationship : current.relationship,
+  });
+}
+
+// Scoped update (IDOR-safe: where {id, projectId}). Throws "Persona not found" if missing.
+// A unique [projectId, name] collision surfaces as Prisma P2002 for the caller to map to 409.
+export async function updatePersona(projectId: string, id: string, patch: PersonaPatch) {
+  const current = await prisma.interviewerPersona.findFirst({ where: { id, projectId } });
+  if (!current) throw new Error("Persona not found");
+  const merged = mergePersonaUpdate(current, patch);
+  if (!merged.ok) throw new Error(merged.error);
+  const r = await prisma.interviewerPersona.updateMany({ where: { id, projectId }, data: merged.value });
+  if (r.count === 0) throw new Error("Persona not found");
+  return prisma.interviewerPersona.findFirstOrThrow({ where: { id, projectId } });
+}
+
 // Scoped delete: only removes the row if it belongs to the given (user-owned) project.
 export function deletePersona(projectId: string, id: string) {
   return prisma.interviewerPersona.deleteMany({ where: { id, projectId } });

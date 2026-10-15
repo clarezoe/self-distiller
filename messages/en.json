@@ -30,7 +30,8 @@
     "primaryNav": "Main navigation",
     "moreSections": "More sections",
     "close": "Close",
-    "installHelp": "Install on your phone: on iPhone use Share, then Add to Home Screen; on Android use the browser menu, then Install app."
+    "installHelp": "Install on your phone: on iPhone use Share, then Add to Home Screen; on Android use the browser menu, then Install app.",
+    "personas": "Personas"
   },
   "login": {
     "title": "Self Distiller",
@@ -231,16 +232,6 @@
     "errApplyFailed": "Apply failed",
     "customPersona": "Custom (free text)",
     "usingPersona": "Using a saved persona — its description guides the interviewer's voice.",
-    "savedPersonas": "Saved personas ({count})",
-    "noPersonas": "No saved personas yet. Add the specific people in your life — a blunt cofounder, a gentle parent, a demanding customer.",
-    "personaNamePlaceholder": "Name (e.g. Blunt cofounder)",
-    "personaRelationshipPlaceholder": "Relationship (optional, e.g. cofounder)",
-    "personaDescriptionPlaceholder": "Describe how they talk: tone, vocabulary, directness, how they'd push you.",
-    "addPersona": "Add persona",
-    "savingPersona": "Saving…",
-    "deletePersona": "Delete",
-    "errPersonaCreate": "Failed to save persona",
-    "errPersonaDelete": "Failed to delete persona",
     "distillVoice": "Distill voice",
     "reDistillVoice": "Re-distill from scratch",
     "clearVoice": "Clear voice",
@@ -262,7 +253,9 @@
     "evidence_fair": "fair",
     "evidence_good": "good",
     "voiceMoreHint": "Add more of their messages for a more accurate voice. 2000+ characters (about 30+ messages) works well.",
-    "voiceCounter": "{count} characters"
+    "voiceCounter": "{count} characters",
+    "managePersonas": "Manage personas",
+    "noSavedPersonasHint": "No saved personas yet. Create one in Personas to role-play a specific person."
   },
   "calibration": {
     "title": "Calibration",
@@ -401,5 +394,28 @@
     "title": "Versions",
     "note": "Self Model version history: reason for each update, affected scope, evidence, approval status, and rollback.",
     "comingSoon": "Coming in a later phase."
+  },
+  "personas": {
+    "title": "Personas",
+    "createProjectFirst": "Create a project first (see <b>Contexts</b>), then add personas here.",
+    "subtitle": "People the interviewer can role-play. Distill a voice from their real messages so the interviewer sounds like them.",
+    "newPersona": "New persona",
+    "count": "Your personas ({count})",
+    "noPersonas": "No personas yet. Add the specific people in your life — a blunt cofounder, a gentle parent, a demanding customer.",
+    "namePlaceholder": "Name (e.g. Blunt cofounder)",
+    "relationshipPlaceholder": "Relationship (optional, e.g. cofounder)",
+    "descriptionPlaceholder": "Describe how they talk: tone, vocabulary, directness, how they'd push you.",
+    "add": "Add persona",
+    "saving": "Saving…",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirmDelete": "Delete persona \"{name}\"? This also removes its distilled voice.",
+    "voiceNotDistilled": "Voice: not distilled",
+    "startInterview": "Start interview with this persona",
+    "errCreate": "Failed to save persona",
+    "errUpdate": "Failed to update persona",
+    "errDelete": "Failed to delete persona"
   }
 }

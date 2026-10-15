@@ -30,7 +30,8 @@
     "primaryNav": "主导航",
     "moreSections": "更多栏目",
     "close": "关闭",
-    "installHelp": "安装到手机：iPhone 点「分享」→「添加到主屏幕」；Android 点浏览器菜单→「安装应用」。"
+    "installHelp": "安装到手机：iPhone 点「分享」→「添加到主屏幕」；Android 点浏览器菜单→「安装应用」。",
+    "personas": "人物"
   },
   "login": {
     "title": "自我蒸馏器",
@@ -231,16 +232,6 @@
     "errApplyFailed": "应用失败",
     "customPersona": "自定义（自由输入）",
     "usingPersona": "正在使用已保存的人设——其描述将引导访谈者的语气。",
-    "savedPersonas": "已保存的人设（{count}）",
-    "noPersonas": "还没有已保存的人设。把你生活中的具体的人加进来——直率的合伙人、温柔的父母、苛刻的客户。",
-    "personaNamePlaceholder": "名称（例如：直率的合伙人）",
-    "personaRelationshipPlaceholder": "关系（可选，例如：合伙人）",
-    "personaDescriptionPlaceholder": "描述他们说话的方式：语气、用词、直接程度、会怎样追问你。",
-    "addPersona": "添加人设",
-    "savingPersona": "保存中…",
-    "deletePersona": "删除",
-    "errPersonaCreate": "保存人设失败",
-    "errPersonaDelete": "删除人设失败",
     "distillVoice": "蒸馏说话风格",
     "reDistillVoice": "从头重新蒸馏",
     "clearVoice": "清除风格",
@@ -262,7 +253,9 @@
     "evidence_fair": "一般",
     "evidence_good": "充足",
     "voiceMoreHint": "多补充一些对方的消息，说话风格会更准确。2000 字符以上（约 30 条以上消息）效果较好。",
-    "voiceCounter": "{count} 个字符"
+    "voiceCounter": "{count} 个字符",
+    "managePersonas": "管理人物",
+    "noSavedPersonasHint": "还没有已保存的人物。到「人物」页创建一个，即可扮演特定的人。"
   },
   "calibration": {
     "title": "校准",
@@ -401,5 +394,28 @@
     "title": "版本",
     "note": "自我模型版本历史：每次更新的原因、影响范围、证据、审批状态以及回滚。",
     "comingSoon": "将在后续阶段推出。"
+  },
+  "personas": {
+    "title": "人物",
+    "createProjectFirst": "请先创建项目（见<b>情境</b>），然后在这里添加人物。",
+    "subtitle": "访谈者可以扮演的人。从他们的真实消息中提炼说话风格，让访谈者更像本人。",
+    "newPersona": "新建人物",
+    "count": "你的人物（{count}）",
+    "noPersonas": "还没有人物。把你生活中的具体的人加进来——直率的合伙人、温柔的父母、苛刻的客户。",
+    "namePlaceholder": "名称（例如：直率的合伙人）",
+    "relationshipPlaceholder": "关系（可选，例如：合伙人）",
+    "descriptionPlaceholder": "描述他们说话的方式：语气、用词、直接程度、会怎样追问你。",
+    "add": "添加人物",
+    "saving": "保存中…",
+    "edit": "编辑",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "confirmDelete": "删除人物「{name}」？其提炼的说话风格也会一并删除。",
+    "voiceNotDistilled": "说话风格：尚未提炼",
+    "startInterview": "与此人物开始访谈",
+    "errCreate": "保存人物失败",
+    "errUpdate": "更新人物失败",
+    "errDelete": "删除人物失败"
   }
 }

@@ -10,6 +10,7 @@ const SECTIONS = [
   { href: "/", key: "dashboard" },
   { href: "/import", key: "import" },
   { href: "/interview", key: "interview" },
+  { href: "/personas", key: "personas" },
   { href: "/calibration", key: "calibration" },
   { href: "/self-model", key: "selfModel" },
   { href: "/contexts", key: "contexts" },

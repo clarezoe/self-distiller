@@ -7,7 +7,13 @@ import { listPersonas } from "@/lib/services/interviewer-personas";
 import { getActiveModel } from "@/lib/self-model/version";
 import { InterviewClient } from "./interview-client";
 
-export default async function InterviewPage() {
+export default async function InterviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ persona?: string | string[] }>;
+}) {
+  const { persona: personaParam } = await searchParams;
+  const initialPersonaId = typeof personaParam === "string" ? personaParam : undefined;
   const user = await getCurrentUser();
   if (!user) return null;
   const t = await getTranslations("interview");
@@ -48,10 +54,8 @@ export default async function InterviewPage() {
           name: p.name,
           description: p.description,
           relationship: p.relationship,
-          voiceProfile: p.voiceProfile,
-          voiceDistilledAt: p.voiceDistilledAt ? p.voiceDistilledAt.toISOString() : null,
-          voiceSampleChars: p.voiceSampleChars,
         }))}
+        initialPersonaId={initialPersonaId}
         hasModel={!!activeModel}
       />
 
