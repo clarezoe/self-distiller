@@ -15,4 +15,13 @@ describe("messages", () => {
       expect(m.nav.refreshing).toBeTruthy();
     }
   });
+
+  it("has persona voice distill labels in en and zh", () => {
+    for (const m of [en, zh]) {
+      for (const k of ["distillVoice", "reDistillVoice", "clearVoice", "voiceDistilledOn", "voiceSamplesLabel", "voiceSamplesHelp", "errVoiceDistill"] as const) {
+        expect(m.interview[k]).toBeTruthy();
+      }
+    }
+    expect(Object.keys(en.interview).sort()).toEqual(Object.keys(zh.interview).sort());
+  });
 });

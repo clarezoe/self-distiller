@@ -335,6 +335,9 @@ model InterviewerPersona {
   name         String
   description  String
   relationship String?
+  // Speaking-style profile distilled from sample messages (raw samples are never stored).
+  voiceProfile     String?
+  voiceDistilledAt DateTime?
   createdAt    DateTime @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

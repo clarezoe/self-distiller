@@ -17,6 +17,7 @@ import {
   listInterviews,
   setExtractionReport,
 } from "@/lib/services/interviews";
+import { getPersonaVoiceProfile } from "@/lib/services/interviewer-personas";
 import type { InterviewType } from "@/generated/prisma/client";
 
 // Plan a role-based interview (LLM, PRD §13.2). Returns the structured plan; the caller
@@ -28,14 +29,17 @@ export async function planInterview(
     type: InterviewType;
     interviewerPersona: string;
     interviewerPersonaDescription?: string;
+    // Saved persona id: its distilled voice profile (if any) is looked up here, scoped by project.
+    interviewerPersonaId?: string;
     targetContextIds?: string[];
     language?: string;
     goal?: string;
   },
 ): Promise<InterviewPlan> {
-  const [active, previous] = await Promise.all([
+  const [active, previous, voiceProfile] = await Promise.all([
     getActiveModel(projectId),
     listInterviews(projectId),
+    input.interviewerPersonaId ? getPersonaVoiceProfile(projectId, input.interviewerPersonaId) : Promise.resolve(null),
   ]);
 
   const modelSubset: PlannerSelfModelSubset | undefined = active
@@ -53,6 +57,7 @@ export async function planInterview(
     type: input.type,
     interviewerPersona: input.interviewerPersona,
     interviewerPersonaDescription: input.interviewerPersonaDescription,
+    interviewerVoiceProfile: voiceProfile ?? undefined,
     goal: input.goal,
     targetContexts: input.targetContextIds,
     language: input.language,

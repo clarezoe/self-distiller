@@ -48,6 +48,8 @@ export default async function InterviewPage() {
           name: p.name,
           description: p.description,
           relationship: p.relationship,
+          voiceProfile: p.voiceProfile,
+          voiceDistilledAt: p.voiceDistilledAt ? p.voiceDistilledAt.toISOString() : null,
         }))}
         hasModel={!!activeModel}
       />

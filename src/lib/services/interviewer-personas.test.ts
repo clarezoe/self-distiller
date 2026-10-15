@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizePersonaInput } from "./interviewer-personas";
+import { normalizePersonaInput, validateVoiceSamples } from "./interviewer-personas";
 
 // The Prisma-backed list/create/delete are all scoped by `projectId` in their `where`/`data`
 // (the caller passes a user-owned projectId via getActiveProject/getProjectForUser), so a
@@ -43,5 +43,20 @@ describe("normalizePersonaInput", () => {
   it("rejects an over-long description", () => {
     const r = normalizePersonaInput({ name: "Coach", description: "x".repeat(2001) });
     expect(r.ok).toBe(false);
+  });
+});
+
+describe("validateVoiceSamples", () => {
+  it("rejects missing, too-short, and too-long samples", () => {
+    expect(validateVoiceSamples(undefined).ok).toBe(false);
+    expect(validateVoiceSamples("   ").ok).toBe(false);
+    expect(validateVoiceSamples("x".repeat(199)).ok).toBe(false);
+    expect(validateVoiceSamples("x".repeat(20001)).ok).toBe(false);
+  });
+
+  it("accepts and trims valid samples", () => {
+    const r = validateVoiceSamples("  " + "x".repeat(200) + "  ");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toBe("x".repeat(200));
   });
 });

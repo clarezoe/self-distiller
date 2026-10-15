@@ -239,7 +239,22 @@
     "savingPersona": "Saving…",
     "deletePersona": "Delete",
     "errPersonaCreate": "Failed to save persona",
-    "errPersonaDelete": "Failed to delete persona"
+    "errPersonaDelete": "Failed to delete persona",
+    "distillVoice": "Distill voice",
+    "reDistillVoice": "Re-distill",
+    "clearVoice": "Clear voice",
+    "voiceDistilledOn": "Voice distilled {date}",
+    "viewVoiceProfile": "View profile",
+    "hideVoiceProfile": "Hide profile",
+    "voiceSamplesLabel": "Paste messages this person wrote to you (only their lines)",
+    "voiceSamplesHelp": "Samples are used once to build a style profile and are not stored. Paste again any time to re-distill. {min}-{max} characters.",
+    "voiceSamplesPlaceholder": "Paste their messages here…",
+    "distillingVoice": "Distilling…",
+    "runDistill": "Distill",
+    "cancel": "Cancel",
+    "errVoiceDistill": "Failed to distill voice",
+    "errVoiceClear": "Failed to clear voice",
+    "voiceTooShort": "Paste at least {min} characters so there is enough signal."
   },
   "calibration": {
     "title": "Calibration",
