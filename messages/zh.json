@@ -206,8 +206,6 @@
     "sendReply": "发送回复",
     "extracting": "正在提取报告…",
     "endAndExtract": "结束访谈并提取",
-    "next": "下一步：{purpose}",
-    "allTurnsUsed": "已用完所有计划轮次 — 准备好后即可提取。",
     "extractionReport": "提取报告",
     "tonePatterns": "语气模式",
     "reactionPatterns": "反应模式",
@@ -255,7 +253,12 @@
     "voiceMoreHint": "多补充一些对方的消息，说话风格会更准确。2000 字符以上（约 30 条以上消息）效果较好。",
     "voiceCounter": "{count} 个字符",
     "managePersonas": "管理人物",
-    "noSavedPersonasHint": "还没有已保存的人物。到「人物」页创建一个，即可扮演特定的人。"
+    "noSavedPersonasHint": "还没有已保存的人物。到「人物」页创建一个，即可扮演特定的人。",
+    "typing": "{persona} 正在输入…",
+    "retry": "重试",
+    "errFailedReply": "访谈者没能回复。你的消息已保存，请重试。",
+    "goalReached": "访谈已达成目标。现在可以提取，也可以继续回复。",
+    "interviewPlan": "访谈计划"
   },
   "calibration": {
     "title": "校准",

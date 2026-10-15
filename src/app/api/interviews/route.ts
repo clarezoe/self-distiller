@@ -62,7 +62,10 @@ export async function POST(request: Request) {
       language: parsed.data.language,
       goal: plan.goal,
       // Seed the transcript with the first planned interviewer turn.
-      transcript: [{ speaker: "agent", text: plan.turns[0].text, timestamp: now }],
+      transcript: [{ speaker: "agent", text: plan.turns[0].text, timestamp: now, plannedIndex: 0 }],
+      plan,
+      interviewerPersonaDescription: parsed.data.interviewerPersonaDescription,
+      interviewerPersonaId: parsed.data.interviewerPersonaId,
     });
 
     return NextResponse.json(

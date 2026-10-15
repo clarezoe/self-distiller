@@ -20,6 +20,8 @@ export type TranscriptTurn = {
   speaker: "agent" | "user";
   text: string;
   timestamp: string;
+  // Agent turns only: index of the planned turn this message covered (null/absent = none).
+  plannedIndex?: number | null;
 };
 
 function toTranscript(value: unknown): TranscriptTurn[] {
@@ -43,6 +45,9 @@ export async function createInterview(
     language?: string;
     goal: string;
     transcript?: TranscriptTurn[];
+    plan?: unknown;
+    interviewerPersonaDescription?: string;
+    interviewerPersonaId?: string;
   },
 ) {
   return prisma.interview.create({
@@ -54,6 +59,9 @@ export async function createInterview(
       language: data.language ?? null,
       goal: data.goal,
       transcript: (data.transcript ?? []) as object,
+      ...(data.plan ? { plan: JSON.parse(JSON.stringify(data.plan)) as object } : {}),
+      interviewerPersonaDescription: data.interviewerPersonaDescription ?? null,
+      interviewerPersonaId: data.interviewerPersonaId ?? null,
     },
   });
 }
