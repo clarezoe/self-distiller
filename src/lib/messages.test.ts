@@ -18,7 +18,7 @@ describe("messages", () => {
 
   it("has persona voice distill labels in en and zh", () => {
     for (const m of [en, zh]) {
-      for (const k of ["distillVoice", "reDistillVoice", "clearVoice", "voiceDistilledOn", "voiceSamplesLabel", "voiceSamplesHelp", "errVoiceDistill"] as const) {
+      for (const k of ["distillVoice", "reDistillVoice", "clearVoice", "voiceDistilledOn", "voiceSamplesLabel", "voiceSamplesHelp", "errVoiceDistill", "addMoreMessages", "voiceEvidence", "evidence_rough", "evidence_fair", "evidence_good", "voiceMoreHint", "voiceCounter"] as const) {
         expect(m.interview[k]).toBeTruthy();
       }
     }

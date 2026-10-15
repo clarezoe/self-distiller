@@ -9,6 +9,15 @@ export const VOICE_SAMPLES_MIN = 200;
 export const VOICE_SAMPLES_MAX = 20000;
 export const VOICE_PROFILE_MAX = 3000;
 
+export type VoiceEvidenceLevel = "rough" | "fair" | "good";
+
+// Pure: how much evidence (cumulative characters of their messages) a profile rests on.
+export function voiceEvidenceLevel(chars: number): VoiceEvidenceLevel {
+  if (chars < 500) return "rough";
+  if (chars < 2000) return "fair";
+  return "good";
+}
+
 // Strict-mode compatible: all properties required, additionalProperties:false.
 export const PERSONA_VOICE_SCHEMA: JsonSchema = {
   type: "object",
@@ -61,7 +70,19 @@ export function buildPersonaVoiceDistillerMessages(input: {
   relationship?: string | null;
   description: string;
   samples: string;
+  // Previous profile (add mode). Only included when non-empty.
+  existingProfile?: string | null;
 }): LlmMessage[] {
+  const existing = input.existingProfile?.trim();
+  const existingBlock = existing
+    ? [
+        "Existing profile built from EARLIER messages by the same person:",
+        "<<<EXISTING_PROFILE",
+        existing,
+        "EXISTING_PROFILE>>>",
+        "Merge the new messages below into this profile: keep traits the new messages still support, adjust or drop traits they contradict, add newly seen traits, and keep example_lines to the 3-6 best across old and new (old example lines are in the profile text). Still describe only what the evidence shows. Keep the same output schema and length.",
+      ]
+    : [];
   return [
     { role: "system", content: SYSTEM },
     {
@@ -69,7 +90,8 @@ export function buildPersonaVoiceDistillerMessages(input: {
       content: [
         `Person: ${input.name}${input.relationship ? ` (${input.relationship})` : ""}`,
         `Background description: ${input.description}`,
-        "Messages written by this person (their lines only):",
+        ...existingBlock,
+        existing ? "New messages written by this person (their lines only):" : "Messages written by this person (their lines only):",
         "<<<SAMPLES",
         input.samples,
         "SAMPLES>>>",

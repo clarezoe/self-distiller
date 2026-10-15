@@ -5,12 +5,14 @@ import { getProjectForUser } from "@/lib/services/projects";
 import {
   clearPersonaVoice,
   distillPersonaVoice,
+  parseDistillMode,
   validateVoiceSamples,
 } from "@/lib/services/interviewer-personas";
 
 const distillSchema = z.object({
   projectId: z.string().min(1),
   samples: z.string(),
+  mode: z.unknown().optional(),
 });
 
 async function ownedProject(userId: string, projectId: string) {
@@ -41,11 +43,14 @@ export async function POST(
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
+  const mode = parseDistillMode(parsed.data.mode);
+  if (!mode.ok) return NextResponse.json({ error: mode.error }, { status: 400 });
+
   const validated = validateVoiceSamples(parsed.data.samples);
   if (!validated.ok) return NextResponse.json({ error: validated.error }, { status: 400 });
 
   try {
-    const persona = await distillPersonaVoice(parsed.data.projectId, id, validated.value, user.id);
+    const persona = await distillPersonaVoice(parsed.data.projectId, id, validated.value, user.id, mode.value);
     return NextResponse.json({ persona });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Failed to distill voice";
