@@ -52,7 +52,7 @@ export default async function CalibrationPage() {
         ) : (
           <ul className="space-y-2 text-sm">
             {past.map((c) => (
-              <li key={c.id} className="flex items-center gap-2">
+              <li key={c.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="truncate text-neutral-600 dark:text-neutral-300">{c.scenario}</span>
                 <span className="ml-auto shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-500 dark:bg-neutral-800">
                   {c.userDecision ?? t("noDecision")}

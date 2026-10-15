@@ -109,11 +109,11 @@ export default async function ContextsPage() {
           ) : (
             <ul className="space-y-1 text-sm">
               {contexts.map((c) => (
-                <li key={c.id} className="flex items-center gap-2">
+                <li key={c.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
                     {c.type}
                   </span>
-                  <span>{c.name}</span>
+                  <span className="min-w-0 break-words">{c.name}</span>
                 </li>
               ))}
             </ul>
@@ -152,8 +152,8 @@ export default async function ContextsPage() {
           ) : (
             <ul className="space-y-1 text-sm">
               {combinations.map((c) => (
-                <li key={c.id} className="flex items-center gap-2">
-                  <span>{c.name}</span>
+                <li key={c.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="min-w-0 break-words">{c.name}</span>
                   <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-500 dark:bg-neutral-800">
                     {c.status}
                   </span>

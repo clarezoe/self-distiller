@@ -161,9 +161,9 @@ export default async function SettingsPage({
         {creds.length > 0 ? (
           <ul className="space-y-1 text-sm">
             {creds.map((c) => (
-              <li key={c.id} className="flex items-center gap-2">
+              <li key={c.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs dark:bg-neutral-800">{c.provider}</span>
-                <span className="text-neutral-500">{c.baseUrl ?? t("defaultEndpoint")}</span>
+                <span className="min-w-0 break-all text-neutral-500">{c.baseUrl ?? t("defaultEndpoint")}</span>
                 <span className="text-xs text-green-600">{t("keyStored")}</span>
               </li>
             ))}
@@ -230,8 +230,8 @@ export default async function SettingsPage({
           {invites.length > 0 ? (
             <ul className="space-y-1 text-sm">
               {invites.map((inv) => (
-                <li key={inv.id} className="flex items-center gap-2">
-                  <span>{inv.email}</span>
+                <li key={inv.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="min-w-0 break-all">{inv.email}</span>
                   <span
                     className={`rounded px-1.5 py-0.5 text-xs ${
                       inv.acceptedAt
@@ -252,7 +252,7 @@ export default async function SettingsPage({
               name="email"
               type="email"
               placeholder={t("inviteEmailPlaceholder")}
-              className={inputCls}
+              className={`${inputCls} min-w-0 flex-1`}
               required
               autoComplete="off"
             />
