@@ -21,7 +21,12 @@
     "contexts": "情境",
     "tasks": "任务",
     "versions": "版本",
-    "settings": "设置"
+    "settings": "设置",
+    "more": "更多",
+    "primaryNav": "主导航",
+    "moreSections": "更多栏目",
+    "close": "关闭",
+    "installHelp": "安装到手机：iPhone 点「分享」→「添加到主屏幕」；Android 点浏览器菜单→「安装应用」。"
   },
   "login": {
     "title": "自我蒸馏器",

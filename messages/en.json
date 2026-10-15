@@ -21,7 +21,12 @@
     "contexts": "Contexts",
     "tasks": "Tasks",
     "versions": "Versions",
-    "settings": "Settings"
+    "settings": "Settings",
+    "more": "More",
+    "primaryNav": "Main navigation",
+    "moreSections": "More sections",
+    "close": "Close",
+    "installHelp": "Install on your phone: on iPhone use Share, then Add to Home Screen; on Android use the browser menu, then Install app."
   },
   "login": {
     "title": "Self Distiller",

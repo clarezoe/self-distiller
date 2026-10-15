@@ -446,8 +446,8 @@ export function InterviewClient({
   // ---- Interview / chat view ----
   return (
     <div className="space-y-6">
-      <section className="space-y-3 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-        <div className="flex items-start justify-between gap-3">
+      <section className="space-y-3 rounded-xl border border-neutral-200 p-4 md:p-5 dark:border-neutral-800">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-medium">{interviewGoal}</h2>
             <p className="text-xs text-neutral-400">
@@ -484,12 +484,12 @@ export function InterviewClient({
         {!report ? (
           <div className="space-y-2">
             <textarea
-              className={`${inputCls} min-h-24`}
+              className={`${inputCls} min-h-24 scroll-mb-28`}
               placeholder={t("replyPlaceholder")}
               value={reply}
               onChange={(e) => setReply(e.target.value)}
             />
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex scroll-mb-28 flex-wrap items-center gap-2">
               <button className={btnCls} onClick={sendReply} disabled={busy !== null || !reply.trim()}>
                 {busy === "send" ? t("sending") : t("sendReply")}
               </button>
