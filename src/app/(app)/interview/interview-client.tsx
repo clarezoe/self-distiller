@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { coveredPlannedIndexes } from "@/lib/prompts/interview-turn";
 import { languageLabel } from "@/lib/language-label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -35,7 +36,13 @@ type Persona = {
   relationship: string | null;
 };
 
-type Turn = { speaker: "agent" | "user"; text: string; timestamp: string };
+type Turn = {
+  speaker: "agent" | "user";
+  text: string;
+  timestamp: string;
+  plannedIndex?: number | null;
+  coveredIndexes?: number[];
+};
 type PlannedTurn = { text: string; purpose: string };
 
 type StartResult = {
@@ -476,7 +483,10 @@ export function InterviewClient({
             <summary className="cursor-pointer">{t("interviewPlan")}</summary>
             <ol className="mt-1 list-decimal space-y-0.5 pl-5">
               {plannedTurns.map((p, i) => (
-                <li key={i}>{p.purpose}</li>
+                <li key={i}>
+                  {coveredPlannedIndexes(transcript).has(i) ? "\u2713 " : ""}
+                  {p.purpose}
+                </li>
               ))}
             </ol>
           </details>

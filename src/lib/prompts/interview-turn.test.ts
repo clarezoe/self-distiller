@@ -26,6 +26,14 @@ describe("coveredPlannedIndexes", () => {
     ]);
     expect([...s].sort()).toEqual([0, 3]);
   });
+
+  it("includes coveredIndexes from agent turns", () => {
+    const s = coveredPlannedIndexes([
+      { speaker: "agent", text: "x", plannedIndex: 0, coveredIndexes: [2, 4] },
+      { speaker: "user", text: "z", coveredIndexes: [9] },
+    ]);
+    expect([...s].sort()).toEqual([0, 2, 4]);
+  });
 });
 
 describe("buildInterviewTurnMessages", () => {

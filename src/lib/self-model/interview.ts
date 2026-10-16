@@ -8,6 +8,7 @@ import {
 } from "@/lib/prompts/interview-planner";
 import {
   buildInterviewTurnMessages,
+  coveredPlannedIndexes,
   INTERVIEW_TURN_SCHEMA,
   type InterviewTurnResult,
 } from "@/lib/prompts/interview-turn";
@@ -23,6 +24,13 @@ import {
   listInterviews,
   setExtractionReport,
 } from "@/lib/services/interviews";
+import { askJev, isJevEnabled } from "@/lib/jev/client";
+import {
+  buildGateRequest,
+  coveredFromAnswers,
+  evaluateGate,
+  regenerationNote,
+} from "@/lib/jev/interview-gate";
 import { getPersonaVoiceProfile } from "@/lib/services/interviewer-personas";
 import type { TranscriptTurn } from "@/lib/services/interviews";
 import type { InterviewType } from "@/generated/prisma/client";
@@ -159,25 +167,87 @@ export async function nextInterviewTurn(
     transcript,
   });
 
-  const result = await runAgent<InterviewTurnResult>({
-    userId,
-    projectId,
-    agentRole: "interview_turn",
-    messages,
-    schema: { name: "interview_turn", schema: INTERVIEW_TURN_SCHEMA },
-  });
+  const generate = async (note?: string): Promise<InterviewTurnResult> => {
+    const msgs = note
+      ? messages.map((m, i) => (i === messages.length - 1 ? { ...m, content: `${m.content}\n\n${note}` } : m))
+      : messages;
+    const result = await runAgent<InterviewTurnResult>({
+      userId,
+      projectId,
+      agentRole: "interview_turn",
+      messages: msgs,
+      schema: { name: "interview_turn", schema: INTERVIEW_TURN_SCHEMA },
+    });
+    const t = result.parsed;
+    if (!t || typeof t.text !== "string" || !t.text.trim()) {
+      throw new Error("Interviewer returned no next turn. Try again or check the model/credential.");
+    }
+    return t;
+  };
 
-  const turn = result.parsed;
-  if (!turn || typeof turn.text !== "string" || !turn.text.trim()) {
-    throw new Error("Interviewer returned no next turn. Try again or check the model/credential.");
+  const alreadyCovered = coveredPlannedIndexes(transcript);
+  const gate = async (candidate: string) => {
+    if (!isJevEnabled()) return null;
+    const req = buildGateRequest({
+      language: interview.language ?? undefined,
+      persona: interview.interviewerPersona,
+      personaDescription: interview.interviewerPersonaDescription ?? undefined,
+      goal: interview.goal,
+      transcript,
+      candidate,
+      plannedTurns,
+      coveredIndexes: alreadyCovered,
+    });
+    const answers = await askJev({
+      userId,
+      projectId,
+      agentRole: "interview_turn_gate",
+      state: req.state,
+      questions: req.questions,
+    });
+    return answers ? { answers, result: evaluateGate(answers) } : null;
+  };
+
+  let turn = await generate();
+  let judged = await gate(turn.text);
+  let regenerated = false;
+  if (judged && !judged.result.pass) {
+    regenerated = true;
+    const second = await generate(regenerationNote(judged.result.failed, interview.language ?? undefined));
+    const secondJudged = await gate(second.text);
+    // Keep the better candidate; if the second gate failed to run, trust the regeneration.
+    if (!secondJudged || secondJudged.result.minScore >= judged.result.minScore) {
+      turn = second;
+      judged = secondJudged;
+    }
   }
 
   const idx = turn.covers_planned_index;
+  const plannedIndex = typeof idx === "number" && Number.isInteger(idx) && idx >= 0 ? idx : null;
+  const jevCovered = judged ? coveredFromAnswers(judged.answers) : [];
+  const round = (n: number) => Math.round(n * 100) / 100;
+  const quality = judged
+    ? {
+        responds: round(judged.answers.responds),
+        in_character: round(judged.answers.in_character),
+        not_repeat: round(judged.answers.not_repeat),
+        regenerated,
+      }
+    : undefined;
+
   const updated = await appendTurn(interviewId, {
     speaker: "agent",
     text: turn.text.trim(),
     timestamp: new Date().toISOString(),
-    plannedIndex: typeof idx === "number" && Number.isInteger(idx) && idx >= 0 ? idx : null,
+    plannedIndex,
+    ...(jevCovered.length > 0 ? { coveredIndexes: jevCovered } : {}),
+    ...(quality ? { quality } : {}),
   });
-  return { transcript: getTranscript(updated), done: Boolean(turn.should_end) };
+  const updatedTranscript = getTranscript(updated);
+  let done = Boolean(turn.should_end);
+  if (!done && judged && plannedTurns && plannedTurns.length > 0) {
+    const all = coveredPlannedIndexes(updatedTranscript);
+    done = plannedTurns.every((_, i) => all.has(i));
+  }
+  return { transcript: updatedTranscript, done };
 }
