@@ -39,6 +39,10 @@ export type ParsedParticipant = {
 
 export type ParsedConversation = {
   spaceName?: string;
+  /** group_info.json `name` (named spaces), when provided. */
+  title?: string;
+  /** Keys of everyone who spoke in THIS conversation (first-seen order). */
+  participantKeys: string[];
   dateRange: { from?: string; to?: string };
   turns: ParsedTurn[];
 };
@@ -54,6 +58,8 @@ export type GoogleChatFileInput = {
   content: string | unknown;
   /** Optional space/conversation name (e.g. derived from the folder path). */
   spaceName?: string;
+  /** Sibling group_info.json content (raw JSON string or parsed object). */
+  groupInfo?: string | unknown;
 };
 
 export function participantKey(name: string | undefined, email: string | undefined): string {
@@ -123,6 +129,32 @@ function extractTimestamp(msg: Record<string, unknown>): string | undefined {
   );
 }
 
+type GroupMember = { name?: string; email?: string };
+
+// group_info.json ≈ { name?, members: [{ name, email, user_type }] }. Tolerant.
+function parseGroupInfo(raw: unknown): { title?: string; members: GroupMember[] } {
+  let value = raw;
+  if (typeof raw === "string") {
+    try {
+      value = JSON.parse(raw);
+    } catch {
+      return { members: [] };
+    }
+  }
+  const rec = asRecord(value);
+  if (!rec) return { members: [] };
+  const list = Array.isArray(rec.members) ? rec.members : [];
+  const members: GroupMember[] = [];
+  for (const m of list) {
+    const r = asRecord(m);
+    if (!r) continue;
+    const name = str(r.name) ?? str(r.display_name) ?? str(r.displayName);
+    const email = str(r.email) ?? str(r.email_address) ?? str(r.emailAddress);
+    if (name || email) members.push({ name, email });
+  }
+  return { title: str(rec.name), members };
+}
+
 function parseFile(input: GoogleChatFileInput): { parsed: unknown; spaceName?: string } {
   const { content, spaceName } = input;
   if (typeof content === "string") {
@@ -148,6 +180,16 @@ export function parseGoogleChat(files: GoogleChatFileInput[]): ParsedGoogleChat 
   for (const file of files) {
     const { parsed, spaceName } = parseFile(file);
     const messages = extractMessages(parsed);
+    const info = file.groupInfo !== undefined ? parseGroupInfo(file.groupInfo) : { members: [] as GroupMember[] };
+    const nameByEmail = new Map<string, string>();
+    const emailByName = new Map<string, string>();
+    for (const m of info.members) {
+      if (m.name && m.email) {
+        nameByEmail.set(m.email.toLowerCase(), m.name);
+        emailByName.set(m.name, m.email);
+      }
+    }
+    const convKeys: string[] = [];
 
     const turns: ParsedTurn[] = [];
     let from: string | undefined;
@@ -160,12 +202,16 @@ export function parseGoogleChat(files: GoogleChatFileInput[]): ParsedGoogleChat 
       const text = extractText(msg);
       if (!text) continue; // skip attachment-only / system / empty messages
 
-      const { name, email } = extractCreator(msg);
+      const creator = extractCreator(msg);
+      // Fill gaps from group_info members (name <-> email).
+      const name = creator.name ?? (creator.email ? nameByEmail.get(creator.email.toLowerCase()) : undefined);
+      const email = creator.email ?? (creator.name ? emailByName.get(creator.name) : undefined);
       const displayName = name ?? email ?? "Unknown";
       const key = participantKey(name, email);
       const ts = extractTimestamp(msg);
 
       turns.push({ sender: displayName, email, key, text, ts });
+      if (!convKeys.includes(key)) convKeys.push(key);
 
       if (ts) {
         if (!from) from = ts;
@@ -193,6 +239,8 @@ export function parseGoogleChat(files: GoogleChatFileInput[]): ParsedGoogleChat 
 
     conversations.push({
       spaceName,
+      title: info.title,
+      participantKeys: convKeys,
       dateRange: { from, to },
       turns,
     });
@@ -202,4 +250,25 @@ export function parseGoogleChat(files: GoogleChatFileInput[]): ParsedGoogleChat 
     participants: [...participants.values()].sort((a, b) => b.count - a.count),
     conversations,
   };
+}
+
+/**
+ * Display names of everyone in the conversation except the owner. Names come
+ * from the aggregated `participants` list (best name/email), falling back to
+ * the sender label seen in the turns.
+ */
+export function conversationPartners(
+  conversation: ParsedConversation,
+  ownerKey: string,
+  participants: ParsedParticipant[],
+): string[] {
+  const byKey = new Map(participants.map((p) => [p.key, p]));
+  const out: string[] = [];
+  for (const key of conversation.participantKeys) {
+    if (key === ownerKey) continue;
+    const name =
+      byKey.get(key)?.name ?? conversation.turns.find((t) => t.key === key)?.sender ?? key;
+    out.push(name);
+  }
+  return out;
 }

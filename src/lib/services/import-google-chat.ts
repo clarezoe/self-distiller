@@ -1,7 +1,9 @@
 import { MaterialSource } from "@/generated/prisma/client";
 import { createMaterialsBatch, type MaterialInput } from "@/lib/services/materials";
 import { getProjectForUser } from "@/lib/services/projects";
+import { createContext, getContextsByIds, listContexts } from "@/lib/services/contexts";
 import {
+  conversationPartners,
   type ParsedConversation,
   type ParsedGoogleChat,
 } from "@/lib/import/google-chat";
@@ -24,6 +26,26 @@ export function conversationToContent(
     maxChars: Number.POSITIVE_INFINITY,
   });
   return chunks.map((c) => c.content).join("\n");
+}
+
+export type ConversationAssignment = {
+  conversationIndex: number;
+  contextIds?: string[];
+  newRelationshipName?: string;
+};
+
+export class InvalidAssignmentError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidAssignmentError";
+  }
+}
+
+// First line of every chunk so the analyzer sees who the partner is.
+export function chatHeader(partners: string[], relationshipNames: string[]): string {
+  const who = partners.length > 0 ? partners.join(", ") : "unknown";
+  const rel = relationshipNames.length > 0 ? ` (${relationshipNames.join(", ")})` : "";
+  return `# Chat with ${who}${rel}`;
 }
 
 export type GoogleChatCommitResult = {
@@ -56,6 +78,7 @@ export async function commitGoogleChatImport(
   projectId: string,
   parsed: ParsedGoogleChat,
   ownerKey: string,
+  assignments: ConversationAssignment[] = [],
 ): Promise<GoogleChatCommitResult> {
   await getProjectForUser(userId, projectId);
 
@@ -64,33 +87,83 @@ export async function commitGoogleChatImport(
     throw new UnknownOwnerError();
   }
 
-  const participantList = parsed.participants.map((p) => ({
-    name: p.name,
-    email: p.email,
-    key: p.key,
-    isOwner: p.key === ownerKey,
-  }));
+  // Validate + resolve assignments to context ids per conversation BEFORE any write
+  // of materials. New relationship names are created once (case-insensitive dedupe).
+  const contextsByConversation = new Map<number, Set<string>>();
+  const claimedIds = new Set<string>();
+  for (const a of assignments) {
+    if (
+      !Number.isInteger(a.conversationIndex) ||
+      a.conversationIndex < 0 ||
+      a.conversationIndex >= parsed.conversations.length
+    ) {
+      throw new InvalidAssignmentError("Assignment refers to an unknown conversation.");
+    }
+    for (const id of a.contextIds ?? []) claimedIds.add(id);
+  }
+  if (claimedIds.size > 0) {
+    const found = (await getContextsByIds(projectId, [...claimedIds])).filter((c) => c.type === "relationship");
+    if (found.length !== claimedIds.size) {
+      throw new InvalidAssignmentError("Unknown context for this project.");
+    }
+  }
+  const relationshipIdByName = new Map<string, string>();
+  const needsNew = assignments.some((a) => a.newRelationshipName?.trim());
+  if (needsNew) {
+    for (const c of await listContexts(projectId)) {
+      if (c.type === "relationship") relationshipIdByName.set(c.name.trim().toLowerCase(), c.id);
+    }
+  }
+  for (const a of assignments) {
+    const set = contextsByConversation.get(a.conversationIndex) ?? new Set<string>();
+    for (const id of a.contextIds ?? []) set.add(id);
+    const name = a.newRelationshipName?.trim();
+    if (name) {
+      const k = name.toLowerCase();
+      let id = relationshipIdByName.get(k);
+      if (!id) {
+        id = (await createContext(projectId, { type: "relationship", name })).id;
+        relationshipIdByName.set(k, id);
+      }
+      set.add(id);
+    }
+    contextsByConversation.set(a.conversationIndex, set);
+  }
+  const allIds = [...new Set([...contextsByConversation.values()].flatMap((s) => [...s]))];
+  const nameById = new Map<string, string>();
+  if (allIds.length > 0) {
+    for (const c of await getContextsByIds(projectId, allIds)) nameById.set(c.id, c.name);
+  }
 
   // One RawMaterial PER CHUNK. A small conversation chunks to exactly one
   // material; a 30MB DM chunks into many — each ≤ ~20k chars and Analyze-able.
   // Collect every chunk as an input, then insert via the dedup-aware batch so a
   // re-imported export (or duplicate chunks) is skipped, not double-stored.
   const inputs: MaterialInput[] = [];
-  for (const conversation of parsed.conversations) {
-    const chunks = chunkConversation(conversation, ownerKey);
+  for (const [index, conversation] of parsed.conversations.entries()) {
+    const partners = conversationPartners(conversation, ownerKey, parsed.participants);
+    const partnerKeys = conversation.participantKeys.filter((k) => k !== ownerKey);
+    const contextIds = [...(contextsByConversation.get(index) ?? [])];
+    const header = chatHeader(
+      partners.length > 0 ? partners : [conversation.title ?? conversation.spaceName ?? "unknown"],
+      contextIds.map((id) => nameById.get(id)).filter((n): n is string => Boolean(n)),
+    );
+    const chunks = chunkConversation(conversation, ownerKey, { header });
     for (const chunk of chunks) {
       if (!chunk.content.trim()) continue;
 
       inputs.push({
         sourceType: MaterialSource.chat,
         content: chunk.content,
+        contextIds,
         sourceMetadata: {
           source: "google_chat_takeout",
           spaceName: conversation.spaceName ?? null,
+          title: conversation.title ?? null,
           part: chunk.part,
           partsTotal: chunk.partsTotal,
           dateRange: chunk.dateRange,
-          participants: participantList,
+          partners: partnerKeys.map((key, i) => ({ name: partners[i], key })),
           ownerKey,
         },
       });

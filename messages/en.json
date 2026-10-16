@@ -151,7 +151,18 @@
     "modelCreated": "Self Model v{version} created.",
     "errFailedSaveMaterial": "Failed to save material",
     "errAnalysisFailed": "Analysis failed",
-    "errGenerationFailed": "Generation failed"
+    "errGenerationFailed": "Generation failed",
+    "noRelationship": "No relationship",
+    "clearRelationship": "No relationship",
+    "selectAll": "Select all",
+    "selectNone": "Select none",
+    "selectMaterial": "Select material",
+    "setRelationshipFor": "Set relationship for {count} selected",
+    "deleteMaterial": "Delete",
+    "confirmDelete": "Delete this material and the evidence extracted from it? This cannot be undone.",
+    "errUpdateFailed": "Update failed",
+    "oldImportsNote": "Older imports have no chat-partner information. Set a relationship below, or re-import the Takeout folder (new chunks have different content so they are not deduplicated against old ones; delete the old materials afterwards).",
+    "noRelationshipsHint": "Create a relationship context (Contexts page, or via the Google Chat import) to tag materials."
   },
   "googleChat": {
     "title": "Import from Google Chat (Takeout)",
@@ -170,12 +181,20 @@
     "turns": "{count} turns",
     "materials": "{count} material{plural}",
     "fromDate": "from {date}",
+    "dateRange": "{from} – {to}",
     "creating": "Creating materials…",
     "confirmCreate": "Confirm & create materials",
     "createdMaterials": "Created {count} material{plural}{skipNote}. Analyze them above.",
     "skipNote": " ({count} duplicate{plural} skipped)",
     "errFailedParse": "Failed to parse export",
-    "errFailedCreate": "Failed to create materials"
+    "errFailedCreate": "Failed to create materials",
+    "selectFolder": "Or select the whole Takeout folder (Google Chat/Groups)",
+    "relationshipsTitle": "Who are these chats with?",
+    "relationshipsHelp": "You talk differently to different people. Set the relationship for each conversation; the same partner shares one choice.",
+    "relationshipLabel": "Relationship",
+    "notSet": "Not set",
+    "newRelationship": "+ New relationship…",
+    "newRelationshipPlaceholder": "e.g. Husband, Close friend, Colleague"
   },
   "interview": {
     "title": "Interview Studio",

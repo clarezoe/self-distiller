@@ -8,6 +8,7 @@ import {
 
 const conversation: ParsedConversation = {
   spaceName: "DM with Dave",
+  participantKeys: [],
   dateRange: { from: "2024-02-02T10:00:00Z", to: "2024-02-02T10:01:00Z" },
   turns: [
     {
@@ -52,6 +53,7 @@ describe("conversationToContent", () => {
     // Owner has an email but its display sender is the email string. The owner
     // key must still match via the stored turn.key.
     const emailOnly: ParsedConversation = {
+      participantKeys: [],
       dateRange: {},
       turns: [
         {

@@ -14,6 +14,7 @@ const MAX_TOTAL_CHARS = 64_000_000;
 const fileSchema = z.object({
   content: z.string().min(1),
   spaceName: z.string().optional(),
+  groupInfo: z.string().optional(),
 });
 
 const parseSchema = z.object({
@@ -62,8 +63,11 @@ export async function POST(request: Request) {
       (n, c) => n + chunkConversation(c, estimateOwnerKey).length,
       0,
     ),
-    preview: result.conversations.slice(0, 5).map((c) => ({
+    conversations: result.conversations.map((c, index) => ({
+      index,
       spaceName: c.spaceName ?? null,
+      title: c.title ?? null,
+      participantKeys: c.participantKeys,
       turnCount: c.turns.length,
       materialCount: chunkConversation(c, estimateOwnerKey).length,
       dateRange: c.dateRange,

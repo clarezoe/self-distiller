@@ -29,6 +29,8 @@ export type ChunkOptions = {
   targetChars?: number;
   /** Hard ceiling: a chunk is forced to close near here (a single oversized turn may exceed it alone). */
   maxChars?: number;
+  /** Optional first line prepended to every chunk (e.g. "# Chat with X (Husband)"). */
+  header?: string;
 };
 
 const DEFAULT_TARGET = 12_000;
@@ -89,7 +91,7 @@ export function chunkConversation(
   return chunks.map((acc, i) => {
     const stamped = acc.turns.map((t) => t.ts).filter((t): t is string => Boolean(t));
     return {
-      content: acc.lines.join("\n"),
+      content: (opts.header ? [opts.header, ...acc.lines] : acc.lines).join("\n"),
       part: i + 1,
       partsTotal,
       dateRange: { from: stamped[0], to: stamped[stamped.length - 1] },

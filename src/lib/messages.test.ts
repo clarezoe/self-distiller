@@ -52,4 +52,17 @@ describe("messages", () => {
       }
     }
   });
+
+  it("has chat partner relationship labels in en and zh", () => {
+    for (const m of [en, zh]) {
+      for (const k of ["selectFolder", "relationshipsTitle", "relationshipsHelp", "relationshipLabel", "notSet", "newRelationship", "newRelationshipPlaceholder", "dateRange"] as const) {
+        expect(m.googleChat[k]).toBeTruthy();
+      }
+      for (const k of ["noRelationship", "setRelationshipFor", "deleteMaterial", "confirmDelete", "oldImportsNote"] as const) {
+        expect(m.import[k]).toBeTruthy();
+      }
+    }
+    expect(Object.keys(en.googleChat).sort()).toEqual(Object.keys(zh.googleChat).sort());
+    expect(Object.keys(en.import).sort()).toEqual(Object.keys(zh.import).sort());
+  });
 });

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { getProjectForUser } from "@/lib/services/projects";
 import { parseGoogleChat } from "@/lib/import/google-chat";
-import { commitGoogleChatImport, UnknownOwnerError } from "@/lib/services/import-google-chat";
+import { commitGoogleChatImport, InvalidAssignmentError, UnknownOwnerError } from "@/lib/services/import-google-chat";
 
 // Matches the parse route: the biggest real single DM messages.json is ~30MB,
 // so a 64MB total cap leaves headroom for batch uploads. Above this → 413.
@@ -12,12 +12,20 @@ const MAX_TOTAL_CHARS = 64_000_000;
 const fileSchema = z.object({
   content: z.string().min(1),
   spaceName: z.string().optional(),
+  groupInfo: z.string().optional(),
+});
+
+const assignmentSchema = z.object({
+  conversationIndex: z.number().int().min(0),
+  contextIds: z.array(z.string()).optional(),
+  newRelationshipName: z.string().max(100).optional(),
 });
 
 const commitSchema = z.object({
   projectId: z.string().min(1),
   files: z.array(fileSchema).min(1),
   ownerKey: z.string().min(1),
+  assignments: z.array(assignmentSchema).optional(),
 });
 
 export async function POST(request: Request) {
@@ -52,10 +60,11 @@ export async function POST(request: Request) {
       parsed.data.projectId,
       parsedChat,
       parsed.data.ownerKey,
+      parsed.data.assignments ?? [],
     );
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
-    if (err instanceof UnknownOwnerError) {
+    if (err instanceof UnknownOwnerError || err instanceof InvalidAssignmentError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
     throw err;
