@@ -151,7 +151,18 @@
     "modelCreated": "已创建自我模型 v{version}。",
     "errFailedSaveMaterial": "保存素材失败",
     "errAnalysisFailed": "分析失败",
-    "errGenerationFailed": "生成失败"
+    "errGenerationFailed": "生成失败",
+    "noRelationship": "无关系",
+    "clearRelationship": "无关系",
+    "selectAll": "全选",
+    "selectNone": "取消全选",
+    "selectMaterial": "选择素材",
+    "setRelationshipFor": "为已选 {count} 项设置关系",
+    "deleteMaterial": "删除",
+    "confirmDelete": "删除这份素材，以及从中提取的证据？此操作无法撤销。",
+    "errUpdateFailed": "更新失败",
+    "oldImportsNote": "旧的导入没有聊天对象信息。可在下方设置关系，或重新导入 Takeout 文件夹（新分块内容不同，不会与旧素材去重；之后请删除旧素材）。",
+    "noRelationshipsHint": "请先创建关系上下文（在“上下文”页面，或通过 Google Chat 导入）后再为素材打标签。"
   },
   "googleChat": {
     "title": "从 Google Chat 导入（Takeout）",
@@ -170,12 +181,20 @@
     "turns": "{count} 轮",
     "materials": "{count} 份素材",
     "fromDate": "起始 {date}",
+    "dateRange": "{from} – {to}",
     "creating": "正在创建素材…",
     "confirmCreate": "确认并创建素材",
     "createdMaterials": "已创建 {count} 份素材{skipNote}。可在上方分析它们。",
     "skipNote": "（跳过了 {count} 条重复{plural}）",
     "errFailedParse": "解析导出文件失败",
-    "errFailedCreate": "创建素材失败"
+    "errFailedCreate": "创建素材失败",
+    "selectFolder": "或选择整个 Takeout 文件夹（Google Chat/Groups）",
+    "relationshipsTitle": "这些聊天的对象是谁？",
+    "relationshipsHelp": "你对不同的人说话方式不同。为每个对话设置关系；同一个聊天对象共用一个选择。",
+    "relationshipLabel": "关系",
+    "notSet": "未设置",
+    "newRelationship": "+ 新建关系…",
+    "newRelationshipPlaceholder": "例如：老公、好朋友、同事"
   },
   "interview": {
     "title": "访谈工作室",

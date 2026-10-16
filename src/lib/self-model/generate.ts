@@ -1,4 +1,5 @@
 import { runAgent } from "@/lib/llm";
+import { getContextsByIds } from "@/lib/services/contexts";
 import { getMaterialForUser } from "@/lib/services/materials";
 import { createEvidenceItems } from "@/lib/services/evidence";
 import { getActiveModel, nextVersion } from "./version";
@@ -10,6 +11,7 @@ import {
 import {
   EVIDENCE_EXTRACTION_SCHEMA,
   buildImportAnalyzerMessages,
+  materialRelationshipHint,
   type EvidenceExtractionResult,
 } from "@/lib/prompts/import-analyzer";
 import {
@@ -24,7 +26,14 @@ export async function analyzeMaterial(userId: string, projectId: string, materia
   const material = await getMaterialForUser(userId, materialId);
   if (material.projectId !== projectId) throw new Error("Material not found");
 
+  const contexts = await getContextsByIds(projectId, material.contextIds);
+  const contextHint = materialRelationshipHint(
+    material.sourceMetadata,
+    contexts.filter((c) => c.type === "relationship").map((c) => c.name),
+  );
+
   const messages = buildImportAnalyzerMessages({
+    contextHint,
     content: material.content,
     sourceType: material.sourceType,
     language: material.language,

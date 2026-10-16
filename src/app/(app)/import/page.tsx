@@ -5,6 +5,7 @@ import { listContexts } from "@/lib/services/contexts";
 import { MATERIAL_SOURCES, listMaterials } from "@/lib/services/materials";
 import { ImportClient } from "./import-client";
 import { GoogleChatImportClient } from "./google-chat-client";
+import { MaterialsList } from "./materials-list";
 
 export default async function ImportPage() {
   const user = await getCurrentUser();
@@ -29,6 +30,10 @@ export default async function ImportPage() {
     listMaterials(project.id),
   ]);
 
+  const relationships = contexts
+    .filter((c) => c.type === "relationship")
+    .map((c) => ({ id: c.id, name: c.name }));
+
   return (
     <div className="space-y-8">
       <header>
@@ -42,27 +47,25 @@ export default async function ImportPage() {
         contexts={contexts.map((c) => ({ id: c.id, type: c.type, name: c.name }))}
       />
 
-      <GoogleChatImportClient projectId={project.id} />
+      <GoogleChatImportClient projectId={project.id} relationships={relationships} />
 
       <section className="space-y-3 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
         <h2 className="font-medium">{t("importedMaterials", { count: materials.length })}</h2>
         {materials.length === 0 ? (
           <p className="text-sm text-neutral-500">{tCommon("none")}</p>
         ) : (
-          <ul className="space-y-2 text-sm">
-            {materials.map((m) => (
-              <li key={m.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
-                  {m.sourceType}
-                </span>
-                {m.language ? <span className="text-xs text-neutral-400">{m.language}</span> : null}
-                <span className="truncate text-neutral-500">{m.content.slice(0, 80)}</span>
-                <span className="ml-auto shrink-0 text-xs text-neutral-400">
-                  {t("evidence", { count: m.evidenceItems.length })}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <MaterialsList
+            projectId={project.id}
+            relationships={relationships}
+            materials={materials.map((m) => ({
+              id: m.id,
+              sourceType: m.sourceType,
+              language: m.language,
+              preview: m.content.slice(0, 120),
+              evidenceCount: m.evidenceItems.length,
+              contextIds: m.contextIds,
+            }))}
+          />
         )}
       </section>
     </div>

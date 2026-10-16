@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { getProjectForUser } from "@/lib/services/projects";
-import { createMaterials, listMaterials } from "@/lib/services/materials";
+import { createMaterials, listMaterials, setMaterialContexts } from "@/lib/services/materials";
 import type { MaterialSource } from "@/generated/prisma/client";
 
 export async function GET(request: Request) {
@@ -76,4 +76,37 @@ export async function POST(request: Request) {
     },
     { status: 201 },
   );
+}
+
+const bulkSchema = z.object({
+  projectId: z.string().min(1),
+  materialIds: z.array(z.string()).min(1),
+  contextIds: z.array(z.string()),
+});
+
+// PATCH /api/materials — bulk set relationship contexts on several materials.
+export async function PATCH(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await request.json().catch(() => null);
+  const parsed = bulkSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+  try {
+    await getProjectForUser(user.id, parsed.data.projectId);
+  } catch {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+  try {
+    const result = await setMaterialContexts(
+      parsed.data.projectId,
+      parsed.data.materialIds,
+      parsed.data.contextIds,
+    );
+    return NextResponse.json(result);
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : "Failed" }, { status: 400 });
+  }
 }

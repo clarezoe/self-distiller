@@ -16,6 +16,7 @@ describe("chunkConversation", () => {
   it("small conversation yields exactly one chunk", () => {
     const conv: ParsedConversation = {
       spaceName: "DM",
+      participantKeys: [],
       dateRange: { from: "2024-01-01T09:00:00Z", to: "2024-01-01T09:02:00Z" },
       turns: [
         ownerTurn("Are you free later?", "2024-01-01T09:00:00Z"),
@@ -38,7 +39,7 @@ describe("chunkConversation", () => {
   });
 
   it("empty conversation yields no chunks", () => {
-    const conv: ParsedConversation = { dateRange: {}, turns: [] };
+    const conv: ParsedConversation = { participantKeys: [], dateRange: {}, turns: [] };
     expect(chunkConversation(conv, OWNER)).toHaveLength(0);
   });
 
@@ -49,7 +50,7 @@ describe("chunkConversation", () => {
     for (let i = 0; i < 10; i++) {
       turns.push(i % 2 === 0 ? ownerTurn(body) : friendTurn(body));
     }
-    const conv: ParsedConversation = { dateRange: {}, turns };
+    const conv: ParsedConversation = { participantKeys: [], dateRange: {}, turns };
     const chunks = chunkConversation(conv, OWNER, { targetChars: 500, maxChars: 800 });
 
     expect(chunks.length).toBeGreaterThan(1);
@@ -76,6 +77,7 @@ describe("chunkConversation", () => {
   it("never splits a single turn — an oversized turn becomes its own chunk", () => {
     const huge = "y".repeat(50_000); // bigger than maxChars
     const conv: ParsedConversation = {
+      participantKeys: [],
       dateRange: {},
       turns: [ownerTurn("first small"), ownerTurn(huge), friendTurn("after the giant")],
     };
@@ -99,7 +101,7 @@ describe("chunkConversation", () => {
     for (let i = 0; i < 8; i++) {
       turns.push(i % 2 === 0 ? ownerTurn(body) : friendTurn(body));
     }
-    const conv: ParsedConversation = { dateRange: {}, turns };
+    const conv: ParsedConversation = { participantKeys: [], dateRange: {}, turns };
     const chunks = chunkConversation(conv, OWNER, { targetChars: 600, maxChars: 1000 });
     expect(chunks.length).toBeGreaterThan(1);
     // Every chunk uses the same labeling contract.
@@ -112,6 +114,7 @@ describe("chunkConversation", () => {
 
   it("labels by the other participant when ownerKey is someone else", () => {
     const conv: ParsedConversation = {
+      participantKeys: [],
       dateRange: {},
       turns: [ownerTurn("mine"), friendTurn("theirs")],
     };
@@ -122,6 +125,7 @@ describe("chunkConversation", () => {
 
   it("dateRange uses first/last timestamps present within the chunk", () => {
     const conv: ParsedConversation = {
+      participantKeys: [],
       dateRange: {},
       // Big turns force a split; timestamps only on some turns.
       turns: [

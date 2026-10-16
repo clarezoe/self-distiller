@@ -3,11 +3,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import {
+  getRelationshipChoice,
+  setRelationshipChoice,
+  type RelationshipChoice,
+} from "@/lib/import/relationship-choices";
 
 const btnCls =
-  "rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-white dark:text-neutral-900";
+  "min-h-[44px] rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-white dark:text-neutral-900";
 const btnSecondary =
-  "rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-900";
+  "min-h-[44px] rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-900";
 
 type ParticipantOption = {
   name: string;
@@ -16,8 +21,13 @@ type ParticipantOption = {
   key: string;
 };
 
-type PreviewItem = {
+type RelationshipOption = { id: string; name: string };
+
+type ConversationItem = {
+  index: number;
   spaceName: string | null;
+  title: string | null;
+  participantKeys: string[];
   turnCount: number;
   materialCount: number;
   dateRange: { from?: string; to?: string };
@@ -27,18 +37,36 @@ type ParseResult = {
   participants: ParticipantOption[];
   conversationCount: number;
   materialCount: number;
-  preview: PreviewItem[];
+  conversations: ConversationItem[];
 };
 
 // One uploaded messages.json file: its text + a derived space label.
-type ChatFile = { content: string; spaceName?: string };
+type ChatFile = { content: string; spaceName?: string; groupInfo?: string };
 
-export function GoogleChatImportClient({ projectId }: { projectId: string }) {
+// Relationship choice: "" = not set, "new" = new name, otherwise an existing context id.
+const NOT_SET: RelationshipChoice = { value: "", newName: "" };
+
+const selectCls =
+  "min-h-[44px] w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-base outline-none focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-950";
+
+function dirOf(path: string): string {
+  const i = path.lastIndexOf("/");
+  return i < 0 ? "" : path.slice(0, i);
+}
+
+export function GoogleChatImportClient({
+  projectId,
+  relationships,
+}: {
+  projectId: string;
+  relationships: RelationshipOption[];
+}) {
   const router = useRouter();
   const t = useTranslations("googleChat");
   const tCommon = useTranslations("common");
   const [files, setFiles] = useState<ChatFile[]>([]);
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
+  const [choices, setChoices] = useState<Record<string, RelationshipChoice>>({});
   const [ownerKey, setOwnerKey] = useState<string>("");
   const [busy, setBusy] = useState<null | "parse" | "commit">(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,10 +80,25 @@ export function GoogleChatImportClient({ projectId }: { projectId: string }) {
     setDone(null);
     setParseResult(null);
     const read: ChatFile[] = [];
-    for (const file of Array.from(list)) {
+    const all = Array.from(list);
+    const rel = (f: File) => (f as File & { webkitRelativePath?: string }).webkitRelativePath || "";
+    // Takeout folders: pair each messages.json with the group_info.json beside it.
+    const infoByDir = new Map<string, File>();
+    for (const f of all) {
+      if (f.name.toLowerCase() === "group_info.json") infoByDir.set(dirOf(rel(f)), f);
+    }
+    for (const file of all) {
+      const lower = file.name.toLowerCase();
+      if (!lower.endsWith(".json") || lower === "group_info.json") continue;
+      const path = rel(file);
+      if (path && lower !== "messages.json") continue; // folder mode: skip unrelated json
+      const dir = dirOf(path);
       const content = await file.text();
-      // Use the file name as a best-effort space label.
-      read.push({ content, spaceName: file.name.replace(/\.json$/i, "") });
+      // A loose file has no trustworthy sibling relationship; only pair metadata
+      // when webkitRelativePath proves both files came from the same folder.
+      const info = dir ? infoByDir.get(dir) : undefined;
+      const spaceName = dir ? dir.split("/").pop() : file.name.replace(/\.json$/i, "");
+      read.push({ content, spaceName, groupInfo: info ? await info.text() : undefined });
     }
     setFiles(read);
   }
@@ -84,11 +127,45 @@ export function GoogleChatImportClient({ projectId }: { projectId: string }) {
       setParseResult(result);
       // Pre-select the most frequent participant as a best-guess "me".
       setOwnerKey(result.participants[0]?.key ?? "");
+      setChoices({});
     } catch (e) {
       setError(e instanceof Error ? e.message : tCommon("somethingWrong"));
     } finally {
       setBusy(null);
     }
+  }
+
+  function partnerKeysOf(c: ConversationItem): string[] {
+    return c.participantKeys.filter((k) => k !== ownerKey);
+  }
+
+  // Only one-to-one conversations share a choice. Group conversations stay
+  // independent because their members can have different relationships to the owner.
+  function choiceOf(c: ConversationItem): RelationshipChoice {
+    return getRelationshipChoice(choices, c, ownerKey, NOT_SET);
+  }
+
+  function partnerNames(c: ConversationItem): string {
+    const byKey = new Map((parseResult?.participants ?? []).map((p) => [p.key, p.name]));
+    const names = partnerKeysOf(c).map((k) => byKey.get(k) ?? k);
+    return names.length > 0 ? names.join(", ") : (c.title ?? c.spaceName ?? t("unnamed"));
+  }
+
+  function setChoice(c: ConversationItem, choice: RelationshipChoice) {
+    setChoices((prev) => setRelationshipChoice(prev, c, ownerKey, choice));
+  }
+
+  function buildAssignments() {
+    const out: { conversationIndex: number; contextIds?: string[]; newRelationshipName?: string }[] = [];
+    for (const c of parseResult?.conversations ?? []) {
+      const ch = choiceOf(c);
+      if (ch.value === "new") {
+        if (ch.newName.trim()) out.push({ conversationIndex: c.index, newRelationshipName: ch.newName.trim() });
+      } else if (ch.value) {
+        out.push({ conversationIndex: c.index, contextIds: [ch.value] });
+      }
+    }
+    return out;
   }
 
   async function commit() {
@@ -103,7 +180,7 @@ export function GoogleChatImportClient({ projectId }: { projectId: string }) {
       const res = await fetch("/api/import/google-chat/commit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, files, ownerKey }),
+        body: JSON.stringify({ projectId, files, ownerKey, assignments: buildAssignments() }),
       });
       if (!res.ok) throw new Error(await readError(res, t("errFailedCreate")));
       const result = (await res.json()) as { created: number; skipped: number };
@@ -144,7 +221,18 @@ export function GoogleChatImportClient({ projectId }: { projectId: string }) {
           accept=".json,application/json"
           multiple
           onChange={handleFiles}
-          className="block w-full text-sm"
+          className="block w-full text-base"
+        />
+      </label>
+      <label className="block text-sm">
+        <span className="mb-1 block text-neutral-500">{t("selectFolder")}</span>
+        <input
+          type="file"
+          // @ts-expect-error non-standard attribute, supported by all major browsers
+          webkitdirectory=""
+          multiple
+          onChange={handleFiles}
+          className="block w-full text-base"
         />
       </label>
 
@@ -195,28 +283,59 @@ export function GoogleChatImportClient({ projectId }: { projectId: string }) {
             ))}
           </div>
 
-          {parseResult.preview.length > 0 ? (
-            <details className="text-sm">
-              <summary className="cursor-pointer text-neutral-500">{t("previewConversations")}</summary>
-              <ul className="mt-2 space-y-1 text-xs text-neutral-500">
-                {parseResult.preview.map((c, i) => (
-                  <li key={i} className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-neutral-600 dark:text-neutral-300">
-                      {c.spaceName ?? t("unnamed")}
-                    </span>
-                    <span>{t("turns", { count: c.turnCount })}</span>
-                    <span>
-                      {t("materials", { count: c.materialCount, plural: c.materialCount === 1 ? "" : "s" })}
-                    </span>
-                    {c.dateRange.from ? <span>{t("fromDate", { date: c.dateRange.from })}</span> : null}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">{t("relationshipsTitle")}</p>
+            <p className="text-xs text-neutral-500">{t("relationshipsHelp")}</p>
+            <ul className="space-y-2">
+              {parseResult.conversations.map((c) => {
+                const ch = choiceOf(c);
+                return (
+                  <li key={c.index} className="space-y-2 rounded-md border border-neutral-200 p-3 text-sm dark:border-neutral-800">
+                    <div className="break-words font-medium">{partnerNames(c)}</div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-neutral-500">
+                      <span>{t("turns", { count: c.turnCount })}</span>
+                      <span>
+                        {t("materials", { count: c.materialCount, plural: c.materialCount === 1 ? "" : "s" })}
+                      </span>
+                      {c.dateRange.from || c.dateRange.to ? (
+                        <span>
+                          {t("dateRange", {
+                            from: c.dateRange.from ?? c.dateRange.to ?? "",
+                            to: c.dateRange.to ?? c.dateRange.from ?? "",
+                          })}
+                        </span>
+                      ) : null}
+                    </div>
+                    <select
+                      className={selectCls}
+                      value={ch.value}
+                      aria-label={t("relationshipLabel")}
+                      onChange={(e) => setChoice(c, { value: e.target.value, newName: ch.newName })}
+                    >
+                      <option value="">{t("notSet")}</option>
+                      {relationships.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
+                      <option value="new">{t("newRelationship")}</option>
+                    </select>
+                    {ch.value === "new" ? (
+                      <input
+                        className={selectCls}
+                        value={ch.newName}
+                        placeholder={t("newRelationshipPlaceholder")}
+                        onChange={(e) => setChoice(c, { value: "new", newName: e.target.value })}
+                      />
+                    ) : null}
                   </li>
-                ))}
-              </ul>
-            </details>
-          ) : null}
+                );
+              })}
+            </ul>
+          </div>
 
           <div className="flex items-center gap-3">
-            <button className={btnSecondary} onClick={commit} disabled={busy !== null || !ownerKey}>
+            <button className={`${btnSecondary} min-h-[44px]`} onClick={commit} disabled={busy !== null || !ownerKey}>
               {busy === "commit" ? t("creating") : t("confirmCreate")}
             </button>
           </div>

@@ -156,3 +156,48 @@ export async function getMaterialForUser(userId: string, materialId: string) {
   if (!material) throw new Error("Material not found");
   return material;
 }
+
+// Set the relationship/context ids on materials (scoped to the project) and keep
+// their EvidenceItems in sync so the next Self Model generation uses them.
+// Context ids are validated against the project (forged ids are rejected).
+export async function setMaterialContexts(
+  projectId: string,
+  materialIds: string[],
+  contextIds: string[],
+): Promise<{ updated: number }> {
+  const uniqueContexts = [...new Set(contextIds)];
+  if (uniqueContexts.length > 0) {
+    const found = await prisma.context.count({
+      where: { id: { in: uniqueContexts }, projectId, type: "relationship" },
+    });
+    if (found !== uniqueContexts.length) throw new Error("Unknown relationship for this project");
+  }
+  const owned = await prisma.rawMaterial.findMany({
+    where: { id: { in: materialIds }, projectId },
+    select: { id: true },
+  });
+  const ids = owned.map((m) => m.id);
+  if (ids.length === 0) return { updated: 0 };
+  await prisma.$transaction([
+    prisma.rawMaterial.updateMany({
+      where: { id: { in: ids }, projectId },
+      data: { contextIds: uniqueContexts },
+    }),
+    prisma.evidenceItem.updateMany({
+      where: { rawMaterialId: { in: ids }, projectId },
+      data: { contextIds: uniqueContexts },
+    }),
+  ]);
+  return { updated: ids.length };
+}
+
+// Delete a material and its extracted EvidenceItems, scoped to the project.
+// EvidenceItems are explicitly deleted before the material so they cannot remain
+// detached with rawMaterialId=null and continue feeding the Self Model.
+export async function deleteMaterial(projectId: string, materialId: string): Promise<boolean> {
+  const [, { count }] = await prisma.$transaction([
+    prisma.evidenceItem.deleteMany({ where: { rawMaterialId: materialId, projectId } }),
+    prisma.rawMaterial.deleteMany({ where: { id: materialId, projectId } }),
+  ]);
+  return count > 0;
+}

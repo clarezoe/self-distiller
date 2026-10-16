@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGoogleChat, participantKey } from "./google-chat";
+import { conversationPartners, parseGoogleChat, participantKey } from "./google-chat";
 
 // Fixture: a multi-party space (3 people) modeled on the documented Takeout shape.
 const multiPartySpace = {
@@ -148,5 +148,44 @@ describe("parseGoogleChat — tolerance", () => {
     ]);
     expect(result.conversations).toHaveLength(1);
     expect(result.conversations[0].turns[0].sender).toBe("X");
+  });
+});
+
+describe("per-conversation partners", () => {
+  const dm = {
+    messages: [
+      { creator: { name: "Me Owner", email: "me@example.com" }, text: "hi" },
+      { creator: { email: "dave@example.com" }, text: "yo" },
+    ],
+  };
+  const groupInfo = JSON.stringify({
+    name: "Weekend plans",
+    members: [
+      { name: "Me Owner", email: "me@example.com" },
+      { name: "Dave Friend", email: "dave@example.com" },
+    ],
+  });
+
+  it("pairs group_info: title, participantKeys and name fill-in", () => {
+    const r = parseGoogleChat([{ content: dm, spaceName: "DM_1", groupInfo }]);
+    const c = r.conversations[0];
+    expect(c.title).toBe("Weekend plans");
+    expect(c.participantKeys).toEqual(["email:me@example.com", "email:dave@example.com"]);
+    expect(r.participants.find((p) => p.key === "email:dave@example.com")?.name).toBe("Dave Friend");
+  });
+
+  it("tracks participantKeys per conversation, not globally", () => {
+    const other = { messages: [{ creator: { name: "Eve", email: "eve@example.com" }, text: "x" }, { creator: { name: "Me Owner", email: "me@example.com" }, text: "y" }] };
+    const r = parseGoogleChat([{ content: dm }, { content: other }]);
+    expect(r.conversations[0].participantKeys).not.toContain("email:eve@example.com");
+    expect(r.conversations[1].participantKeys).toContain("email:eve@example.com");
+    expect(r.conversations[0].title).toBeUndefined();
+  });
+
+  it("conversationPartners excludes the owner", () => {
+    const r = parseGoogleChat([{ content: dm, groupInfo }]);
+    expect(conversationPartners(r.conversations[0], "email:me@example.com", r.participants)).toEqual([
+      "Dave Friend",
+    ]);
   });
 });
