@@ -27,6 +27,7 @@ export type TurnTranscriptItem = {
   text: string;
   // Index into the plan's turns this agent turn covered (stored when generated).
   plannedIndex?: number | null;
+  coveredIndexes?: number[];
 };
 
 export const MAX_AGENT_TURNS = 12;
@@ -35,8 +36,10 @@ export const MAX_AGENT_TURNS = 12;
 export function coveredPlannedIndexes(transcript: TurnTranscriptItem[]): Set<number> {
   const covered = new Set<number>();
   for (const t of transcript) {
-    if (t.speaker === "agent" && typeof t.plannedIndex === "number" && Number.isInteger(t.plannedIndex)) {
-      covered.add(t.plannedIndex);
+    if (t.speaker !== "agent") continue;
+    if (typeof t.plannedIndex === "number" && Number.isInteger(t.plannedIndex)) covered.add(t.plannedIndex);
+    for (const i of t.coveredIndexes ?? []) {
+      if (Number.isInteger(i) && i >= 0) covered.add(i);
     }
   }
   return covered;

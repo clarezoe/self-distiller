@@ -22,6 +22,10 @@ export type TranscriptTurn = {
   timestamp: string;
   // Agent turns only: index of the planned turn this message covered (null/absent = none).
   plannedIndex?: number | null;
+  // Agent turns only: planned-turn indexes Jev judged covered by this turn (optional).
+  coveredIndexes?: number[];
+  // Agent turns only: Jev quality-gate scores (optional; absent when Jev is disabled).
+  quality?: { responds: number; in_character: number; not_repeat: number; regenerated: boolean };
 };
 
 function toTranscript(value: unknown): TranscriptTurn[] {
