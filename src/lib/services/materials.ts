@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { MaterialSource, type RawMaterial } from "@/generated/prisma/client";
+import { ContextType, MaterialSource, type RawMaterial } from "@/generated/prisma/client";
 import { chunkText } from "@/lib/import/chunk-text";
 import { contentHash } from "@/lib/import/hash";
 
@@ -157,38 +157,54 @@ export async function getMaterialForUser(userId: string, materialId: string) {
   return material;
 }
 
-// Set the relationship/context ids on materials (scoped to the project) and keep
-// their EvidenceItems in sync so the next Self Model generation uses them.
-// Context ids are validated against the project (forged ids are rejected).
+// Replace the contexts of the given types on materials (scoped to the project) and
+// keep their EvidenceItems in sync so the next Self Model generation uses them.
+// Contexts of other types stay untouched, so relabelling a relationship never drops
+// a language/role/scene tag. Context ids are validated against the project and the
+// replaced types (forged ids are rejected).
 export async function setMaterialContexts(
   projectId: string,
   materialIds: string[],
   contextIds: string[],
+  types: ContextType[] = [ContextType.relationship],
 ): Promise<{ updated: number }> {
+  const replaceTypes = [...new Set(types)];
   const uniqueContexts = [...new Set(contextIds)];
   if (uniqueContexts.length > 0) {
     const found = await prisma.context.count({
-      where: { id: { in: uniqueContexts }, projectId, type: "relationship" },
+      where: { id: { in: uniqueContexts }, projectId, type: { in: replaceTypes } },
     });
-    if (found !== uniqueContexts.length) throw new Error("Unknown relationship for this project");
+    if (found !== uniqueContexts.length) throw new Error("Unknown context for this project");
   }
   const owned = await prisma.rawMaterial.findMany({
     where: { id: { in: materialIds }, projectId },
-    select: { id: true },
+    select: { id: true, contextIds: true },
   });
-  const ids = owned.map((m) => m.id);
-  if (ids.length === 0) return { updated: 0 };
-  await prisma.$transaction([
-    prisma.rawMaterial.updateMany({
-      where: { id: { in: ids }, projectId },
-      data: { contextIds: uniqueContexts },
+  if (owned.length === 0) return { updated: 0 };
+
+  const existing = [...new Set(owned.flatMap((m) => m.contextIds))];
+  const replaced =
+    existing.length > 0
+      ? await prisma.context.findMany({
+          where: { id: { in: existing }, projectId, type: { in: replaceTypes } },
+          select: { id: true },
+        })
+      : [];
+  const drop = new Set([...replaced.map((c) => c.id), ...uniqueContexts]);
+
+  await prisma.$transaction(
+    owned.flatMap((m) => {
+      const next = [...m.contextIds.filter((id) => !drop.has(id)), ...uniqueContexts];
+      return [
+        prisma.rawMaterial.updateMany({ where: { id: m.id, projectId }, data: { contextIds: next } }),
+        prisma.evidenceItem.updateMany({
+          where: { rawMaterialId: m.id, projectId },
+          data: { contextIds: next },
+        }),
+      ];
     }),
-    prisma.evidenceItem.updateMany({
-      where: { rawMaterialId: { in: ids }, projectId },
-      data: { contextIds: uniqueContexts },
-    }),
-  ]);
-  return { updated: ids.length };
+  );
+  return { updated: owned.length };
 }
 
 // Delete a material and its extracted EvidenceItems, scoped to the project.

@@ -56,7 +56,7 @@ export default async function ImportPage() {
         ) : (
           <MaterialsList
             projectId={project.id}
-            relationships={relationships}
+            contexts={contexts.map((c) => ({ id: c.id, type: c.type, name: c.name }))}
             materials={materials.map((m) => ({
               id: m.id,
               sourceType: m.sourceType,

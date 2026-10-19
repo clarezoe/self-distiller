@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
+import { CONTEXT_TYPES } from "@/lib/services/contexts";
 import { getProjectForUser } from "@/lib/services/projects";
 import { createMaterials, listMaterials, setMaterialContexts } from "@/lib/services/materials";
 import { validateSourceMetadata } from "@/lib/import/source-metadata";
@@ -103,9 +104,11 @@ const bulkSchema = z.object({
   projectId: z.string().min(1),
   materialIds: z.array(z.string()).min(1),
   contextIds: z.array(z.string()),
+  types: z.array(z.enum(CONTEXT_TYPES)).min(1).optional(),
 });
 
-// PATCH /api/materials — bulk set relationship contexts on several materials.
+// PATCH /api/materials — bulk replace contexts of `types` (default relationship)
+// on several materials; other context types stay.
 export async function PATCH(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -125,6 +128,7 @@ export async function PATCH(request: Request) {
       parsed.data.projectId,
       parsed.data.materialIds,
       parsed.data.contextIds,
+      parsed.data.types,
     );
     return NextResponse.json(result);
   } catch (e) {
