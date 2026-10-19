@@ -1,0 +1,3 @@
+{"file":".trellis/spec/backend/chat-relationship-context.md","reason":"Do not regress material/context contracts."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Backend verification conventions."}
+{"file":".trellis/spec/frontend/index.md","reason":"Mobile and i18n checks for new settings UI."}

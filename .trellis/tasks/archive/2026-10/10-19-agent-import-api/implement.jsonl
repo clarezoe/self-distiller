@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/chat-relationship-context.md","reason":"Existing material/context contracts and evidence sync."}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Prisma patterns and migration conventions."}
+{"file":".trellis/spec/backend/error-handling.md","reason":"API error conventions."}
+{"file":".trellis/spec/frontend/index.md","reason":"Settings and materials list UI conventions."}
