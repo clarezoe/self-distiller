@@ -15,7 +15,10 @@ type MaterialRow = {
   sourceMetadata: Record<string, unknown>;
 };
 
-type RelationshipOption = { id: string; name: string };
+type ContextKind = "language" | "role" | "relationship" | "scene";
+type ContextOption = { id: string; type: ContextKind; name: string };
+
+const KINDS: ContextKind[] = ["language", "role", "relationship", "scene"];
 
 const selectCls =
   "min-h-[44px] rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-base outline-none focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-950";
@@ -25,22 +28,28 @@ const btnSecondary =
 export function MaterialsList({
   projectId,
   materials,
-  relationships,
+  contexts,
 }: {
   projectId: string;
   materials: MaterialRow[];
-  relationships: RelationshipOption[];
+  contexts: ContextOption[];
 }) {
   const router = useRouter();
   const t = useTranslations("import");
   const tCommon = useTranslations("common");
   const [selected, setSelected] = useState<string[]>([]);
+  const [bulkKindChoice, setBulkKind] = useState<ContextKind>("relationship");
   const [bulkValue, setBulkValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  const nameById = new Map(relationships.map((r) => [r.id, r.name]));
+  const byId = new Map(contexts.map((c) => [c.id, c]));
+  const kinds = KINDS.filter((k) => contexts.some((c) => c.type === k));
+  const bulkKind = kinds.includes(bulkKindChoice) ? bulkKindChoice : (kinds[0] ?? bulkKindChoice);
+  const optionsOf = (kind: ContextKind) => contexts.filter((c) => c.type === kind);
+  const currentOf = (m: MaterialRow, kind: ContextKind) =>
+    m.contextIds.find((id) => byId.get(id)?.type === kind) ?? "";
 
   async function call(url: string, init: RequestInit) {
     setBusy(true);
@@ -59,10 +68,10 @@ export function MaterialsList({
     }
   }
 
-  function setOne(id: string, value: string) {
+  function setOne(id: string, kind: ContextKind, value: string) {
     return call(`/api/materials/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ contextIds: value ? [value] : [] }),
+      body: JSON.stringify({ contextIds: value ? [value] : [], types: [kind] }),
     });
   }
 
@@ -73,6 +82,7 @@ export function MaterialsList({
         projectId,
         materialIds: selected,
         contextIds: bulkValue ? [bulkValue] : [],
+        types: [bulkKind],
       }),
     });
     setSelected([]);
@@ -94,7 +104,7 @@ export function MaterialsList({
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40">{error}</p>
       ) : null}
 
-      {relationships.length > 0 ? (
+      {kinds.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -105,11 +115,31 @@ export function MaterialsList({
           >
             {selected.length === materials.length ? t("selectNone") : t("selectAll")}
           </button>
-          <select className={selectCls} value={bulkValue} onChange={(e) => setBulkValue(e.target.value)}>
-            <option value="">{t("clearRelationship")}</option>
-            {relationships.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
+          <select
+            className={selectCls}
+            value={bulkKind}
+            aria-label={t("contextKindLabel")}
+            onChange={(e) => {
+              setBulkKind(e.target.value as ContextKind);
+              setBulkValue("");
+            }}
+          >
+            {kinds.map((k) => (
+              <option key={k} value={k}>
+                {t(`contextKinds.${k}`)}
+              </option>
+            ))}
+          </select>
+          <select
+            className={selectCls}
+            value={bulkValue}
+            aria-label={t(`contextKinds.${bulkKind}`)}
+            onChange={(e) => setBulkValue(e.target.value)}
+          >
+            <option value="">{t("clearContext")}</option>
+            {optionsOf(bulkKind).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
               </option>
             ))}
           </select>
@@ -119,16 +149,19 @@ export function MaterialsList({
             disabled={busy || selected.length === 0}
             onClick={applyBulk}
           >
-            {t("setRelationshipFor", { count: selected.length })}
+            {t("setContextFor", { count: selected.length })}
           </button>
         </div>
       ) : (
-        <p className="text-xs text-neutral-500">{t("noRelationshipsHint")}</p>
+        <p className="text-xs text-neutral-500">{t("noContextsHint")}</p>
       )}
 
       <ul className="space-y-3 text-sm">
         {materials.map((m) => {
-          const current = m.contextIds.find((id) => nameById.has(id)) ?? "";
+          const tags = m.contextIds.flatMap((id) => {
+            const c = byId.get(id);
+            return c ? [c] : [];
+          });
           return (
             <li key={m.id} className="space-y-2 rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -145,12 +178,18 @@ export function MaterialsList({
                   {m.sourceType}
                 </span>
                 {m.language ? <span className="text-xs text-neutral-400">{m.language}</span> : null}
-                {current ? (
-                  <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-                    {nameById.get(current)}
-                  </span>
+                {tags.length > 0 ? (
+                  tags.map((c) => (
+                    <span
+                      key={c.id}
+                      title={t(`contextKinds.${c.type}`)}
+                      className="max-w-full break-words rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+                    >
+                      {c.name}
+                    </span>
+                  ))
                 ) : (
-                  <span className="text-xs text-neutral-400">{t("noRelationship")}</span>
+                  <span className="text-xs text-neutral-400">{t("noContexts")}</span>
                 )}
                 <span className="ml-auto shrink-0 text-xs text-neutral-400">
                   {t("evidence", { count: m.evidenceCount })}
@@ -179,23 +218,29 @@ export function MaterialsList({
                   </pre>
                 </details>
               ) : null}
+              {kinds.length > 0 ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {kinds.map((k) => (
+                    <label key={k} className="flex min-w-0 flex-col gap-1 text-xs text-neutral-500">
+                      {t(`contextKinds.${k}`)}
+                      <select
+                        className={`${selectCls} w-full min-w-0`}
+                        value={currentOf(m, k)}
+                        disabled={busy}
+                        onChange={(e) => setOne(m.id, k, e.target.value)}
+                      >
+                        <option value="">{t("noContextOfKind")}</option>
+                        {optionsOf(k).map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              ) : null}
               <div className="flex flex-wrap items-center gap-2">
-                {relationships.length > 0 ? (
-                  <select
-                    className={selectCls}
-                    value={current}
-                    disabled={busy}
-                    aria-label={t("relationshipLabel")}
-                    onChange={(e) => setOne(m.id, e.target.value)}
-                  >
-                    <option value="">{t("noRelationship")}</option>
-                    {relationships.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
                 <button type="button" className={btnSecondary} disabled={busy} onClick={() => remove(m.id)}>
                   {t("deleteMaterial")}
                 </button>

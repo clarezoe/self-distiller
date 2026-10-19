@@ -58,8 +58,11 @@ describe("messages", () => {
       for (const k of ["selectFolder", "relationshipsTitle", "relationshipsHelp", "relationshipLabel", "notSet", "newRelationship", "newRelationshipPlaceholder", "dateRange"] as const) {
         expect(m.googleChat[k]).toBeTruthy();
       }
-      for (const k of ["noRelationship", "setRelationshipFor", "deleteMaterial", "confirmDelete", "oldImportsNote"] as const) {
+      for (const k of ["noContexts", "noContextOfKind", "clearContext", "setContextFor", "contextKindLabel", "noContextsHint", "deleteMaterial", "confirmDelete", "oldImportsNote"] as const) {
         expect(m.import[k]).toBeTruthy();
+      }
+      for (const k of ["language", "role", "relationship", "scene"] as const) {
+        expect(m.import.contextKinds[k]).toBeTruthy();
       }
     }
     expect(Object.keys(en.googleChat).sort()).toEqual(Object.keys(zh.googleChat).sort());

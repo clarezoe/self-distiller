@@ -161,18 +161,26 @@
     "errFailedSaveMaterial": "Failed to save material",
     "errAnalysisFailed": "Analysis failed",
     "errGenerationFailed": "Generation failed",
-    "noRelationship": "No relationship",
-    "clearRelationship": "No relationship",
     "selectAll": "Select all",
     "selectNone": "Select none",
     "selectMaterial": "Select material",
-    "setRelationshipFor": "Set relationship for {count} selected",
     "deleteMaterial": "Delete",
     "confirmDelete": "Delete this material and the evidence extracted from it? This cannot be undone.",
     "errUpdateFailed": "Update failed",
     "oldImportsNote": "Older imports have no chat-partner information. Set a relationship below, or re-import the Takeout folder (new chunks have different content so they are not deduplicated against old ones; delete the old materials afterwards).",
     "sourceMetadataLabel": "Source metadata",
-    "noRelationshipsHint": "Create a relationship context (Contexts page, or via the Google Chat import) to tag materials."
+    "contextKindLabel": "Tag type",
+    "contextKinds": {
+      "language": "Language",
+      "role": "Role",
+      "relationship": "Relationship",
+      "scene": "Scene"
+    },
+    "clearContext": "None (clear)",
+    "noContextOfKind": "None",
+    "noContexts": "No tags",
+    "setContextFor": "Apply to {count} selected",
+    "noContextsHint": "Create contexts (language, role, relationship, scene) on the Contexts page to tag materials."
   },
   "googleChat": {
     "title": "Import from Google Chat (Takeout)",

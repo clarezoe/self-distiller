@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
+import { CONTEXT_TYPES } from "@/lib/services/contexts";
 import {
   deleteMaterial,
   getMaterialForUser,
   setMaterialContexts,
 } from "@/lib/services/materials";
 
-const patchSchema = z.object({ contextIds: z.array(z.string()) });
+const patchSchema = z.object({
+  contextIds: z.array(z.string()),
+  types: z.array(z.enum(CONTEXT_TYPES)).min(1).optional(),
+});
 
-// PATCH /api/materials/:id { contextIds } — set relationship contexts; evidence follows.
+// PATCH /api/materials/:id { contextIds, types? } — replace contexts of `types`
+// (default relationship), keep other types; evidence follows.
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -31,7 +36,12 @@ export async function PATCH(
     return NextResponse.json({ error: "Material not found" }, { status: 404 });
   }
   try {
-    const result = await setMaterialContexts(material.projectId, [id], parsed.data.contextIds);
+    const result = await setMaterialContexts(
+      material.projectId,
+      [id],
+      parsed.data.contextIds,
+      parsed.data.types,
+    );
     return NextResponse.json(result);
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Failed" }, { status: 400 });

@@ -161,18 +161,26 @@
     "errFailedSaveMaterial": "保存素材失败",
     "errAnalysisFailed": "分析失败",
     "errGenerationFailed": "生成失败",
-    "noRelationship": "无关系",
-    "clearRelationship": "无关系",
     "selectAll": "全选",
     "selectNone": "取消全选",
     "selectMaterial": "选择素材",
-    "setRelationshipFor": "为已选 {count} 项设置关系",
     "deleteMaterial": "删除",
     "confirmDelete": "删除这份素材，以及从中提取的证据？此操作无法撤销。",
     "errUpdateFailed": "更新失败",
     "oldImportsNote": "旧的导入没有聊天对象信息。可在下方设置关系，或重新导入 Takeout 文件夹（新分块内容不同，不会与旧素材去重；之后请删除旧素材）。",
     "sourceMetadataLabel": "来源元数据",
-    "noRelationshipsHint": "请先创建关系上下文（在“上下文”页面，或通过 Google Chat 导入）后再为素材打标签。"
+    "contextKindLabel": "标签类型",
+    "contextKinds": {
+      "language": "语言",
+      "role": "角色",
+      "relationship": "关系",
+      "scene": "场景"
+    },
+    "clearContext": "无（清除）",
+    "noContextOfKind": "无",
+    "noContexts": "无标签",
+    "setContextFor": "应用到已选 {count} 项",
+    "noContextsHint": "请先在“上下文”页面创建语言、角色、关系或场景上下文，再为素材打标签。"
   },
   "googleChat": {
     "title": "从 Google Chat 导入（Takeout）",
