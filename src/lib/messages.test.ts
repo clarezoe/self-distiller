@@ -65,4 +65,15 @@ describe("messages", () => {
     expect(Object.keys(en.googleChat).sort()).toEqual(Object.keys(zh.googleChat).sort());
     expect(Object.keys(en.import).sort()).toEqual(Object.keys(zh.import).sort());
   });
+
+  it("has import token settings labels in en and zh", () => {
+    for (const m of [en, zh]) {
+      for (const k of ["importTokenSection", "importTokenDescription", "importTokenSet", "importTokenNone", "generateImportToken", "regenerateImportToken", "revokeImportToken", "revoking", "importTokenOnce"] as const) {
+        expect(m.settings[k]).toBeTruthy();
+      }
+      expect(m.import.sourceMetadataLabel).toBeTruthy();
+    }
+    expect(Object.keys(en.settings).sort()).toEqual(Object.keys(zh.settings).sort());
+    expect(Object.keys(en.import).sort()).toEqual(Object.keys(zh.import).sort());
+  });
 });

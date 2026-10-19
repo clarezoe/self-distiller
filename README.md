@@ -66,6 +66,22 @@ docker compose up --build
 | `pnpm prisma:migrate` | `prisma migrate dev` |
 | `pnpm db:seed` | Seed owner + demo project |
 
+### Agent material import
+
+Agents can push JSONL materials with the separate write-scoped import token. Generate
+it once in Settings, then use the zero-dependency CLI:
+
+```bash
+DISTILL_URL=https://distill.example.com \\
+DISTILL_IMPORT_TOKEN='token-from-Settings' \\
+node scripts/distill-import.mjs --project <project-id> samples.jsonl
+```
+
+Use `--dry-run` for local validation and source/language counts without a network call.
+The project argument is an ID, not a name. See [`scripts/README.md`](scripts/README.md)
+for JSONL fields, batching, context-name creation, privacy guarantees, and the warning
+about cleaning boilerplate before import.
+
 ## Configuration
 
 LLM provider/model and credentials are configured per-user in **Settings**. Credentials are encrypted at rest (AES-256-GCM via `ENCRYPTION_KEY`) and never sent to the client. The "ChatGPT subscription" option is intentionally disabled — use the OpenAI-compatible backend with an OpenAI/OpenRouter key (see `.trellis/tasks/06-22-self-distiller-mvp/research/`).

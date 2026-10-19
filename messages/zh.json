@@ -84,6 +84,15 @@
     "regenerateToken": "重新生成 Persona 令牌",
     "generating": "生成中…",
     "personaTokenOnce": "你的新 Persona 令牌（请立即复制，之后将不再显示）：",
+    "importTokenSection": "Agent 导入令牌",
+    "importTokenDescription": "供 Agent 向 POST /api/materials/import 写入素材的写权限令牌（见 scripts/distill-import.mjs）。与 Persona 令牌相互独立。仅显示一次，泄露后请立即撤销。",
+    "importTokenSet": "已设置导入令牌。",
+    "importTokenNone": "尚未设置导入令牌。",
+    "generateImportToken": "生成导入令牌",
+    "regenerateImportToken": "重新生成导入令牌",
+    "revokeImportToken": "撤销导入令牌",
+    "revoking": "撤销中…",
+    "importTokenOnce": "你的新导入令牌（请立即复制，之后将不再显示）：",
     "invitesSection": "邀请",
     "invitesDescription": "通过邮箱邀请新用户。对方可在 /login 用魔法链接登录，并获得各自独立的工作区。",
     "inviteEmailPlaceholder": "要邀请的邮箱",
@@ -162,6 +171,7 @@
     "confirmDelete": "删除这份素材，以及从中提取的证据？此操作无法撤销。",
     "errUpdateFailed": "更新失败",
     "oldImportsNote": "旧的导入没有聊天对象信息。可在下方设置关系，或重新导入 Takeout 文件夹（新分块内容不同，不会与旧素材去重；之后请删除旧素材）。",
+    "sourceMetadataLabel": "来源元数据",
     "noRelationshipsHint": "请先创建关系上下文（在“上下文”页面，或通过 Google Chat 导入）后再为素材打标签。"
   },
   "googleChat": {

@@ -64,6 +64,10 @@ export default async function ImportPage() {
               preview: m.content.slice(0, 120),
               evidenceCount: m.evidenceItems.length,
               contextIds: m.contextIds,
+              sourceMetadata:
+                m.sourceMetadata && typeof m.sourceMetadata === "object" && !Array.isArray(m.sourceMetadata)
+                  ? (m.sourceMetadata as Record<string, unknown>)
+                  : {},
             }))}
           />
         )}

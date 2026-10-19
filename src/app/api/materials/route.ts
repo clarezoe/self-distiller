@@ -3,7 +3,11 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { getProjectForUser } from "@/lib/services/projects";
 import { createMaterials, listMaterials, setMaterialContexts } from "@/lib/services/materials";
+import { validateSourceMetadata } from "@/lib/import/source-metadata";
 import type { MaterialSource } from "@/generated/prisma/client";
+import { readJsonBody, RequestBodyTooLargeError } from "@/lib/http/json-body";
+
+const MAX_REQUEST_BYTES = 1_048_576;
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -38,13 +42,29 @@ const createSchema = z.object({
   language: z.string().optional(),
   contextIds: z.array(z.string()).optional(),
   materialTime: z.string().optional(),
+  sourceMetadata: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .superRefine((v, ctx) => {
+      if (v === undefined) return;
+      const err = validateSourceMetadata(v);
+      if (err) ctx.addIssue({ code: "custom", message: err });
+    }),
 });
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json().catch(() => null);
+  let body: unknown;
+  try {
+    body = await readJsonBody(request, MAX_REQUEST_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    body = null;
+  }
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -61,6 +81,7 @@ export async function POST(request: Request) {
     content: parsed.data.content,
     language: parsed.data.language,
     contextIds: parsed.data.contextIds,
+    sourceMetadata: parsed.data.sourceMetadata,
     materialTime: parsed.data.materialTime ? new Date(parsed.data.materialTime) : null,
   });
   // Large pastes split into several materials; keep `id` (the first) for the

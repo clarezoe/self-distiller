@@ -64,3 +64,26 @@ export async function generatePersonaToken(userId: string): Promise<string> {
   });
   return token;
 }
+
+// Write-scoped agent import token (GitHub #38). Same at-rest scheme as the persona
+// token but a separate column; never authorizes reads and vice versa.
+export async function hasImportToken(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { importTokenHash: true },
+  });
+  return !!user?.importTokenHash;
+}
+
+export async function generateImportToken(userId: string): Promise<string> {
+  const token = randomBytes(32).toString("hex");
+  await prisma.user.update({
+    where: { id: userId },
+    data: { importTokenHash: hashPersonaToken(token) },
+  });
+  return token;
+}
+
+export async function revokeImportToken(userId: string): Promise<void> {
+  await prisma.user.update({ where: { id: userId }, data: { importTokenHash: null } });
+}
