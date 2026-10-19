@@ -5,7 +5,10 @@ import { getTranslations } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
 import { PROVIDER_OPTIONS, runAgent, type Provider } from "@/lib/llm";
 import {
+  generateImportToken,
   generatePersonaToken,
+  hasImportToken,
+  revokeImportToken,
   getSettings,
   hasPersonaToken,
   listCredentials,
@@ -40,10 +43,12 @@ export default async function SettingsPage({
   // the URL, browser history, and reverse-proxy access logs.
   const cookieStore = await cookies();
   const token = cookieStore.get("persona_token_flash")?.value;
-  const [settings, creds, personaTokenSet, invites] = await Promise.all([
+  const importToken = cookieStore.get("import_token_flash")?.value;
+  const [settings, creds, personaTokenSet, importTokenSet, invites] = await Promise.all([
     getSettings(userId),
     listCredentials(userId),
     hasPersonaToken(userId),
+    hasImportToken(userId),
     isOwner ? listInvites() : Promise.resolve([]),
   ]);
 
@@ -80,6 +85,34 @@ export default async function SettingsPage({
       path: "/settings",
       maxAge: 60,
     });
+    revalidatePath("/settings");
+    redirect("/settings");
+  }
+
+  async function generateImportTokenAction() {
+    "use server";
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.id !== userId) return;
+    const plaintext = await generateImportToken(userId);
+    const jar = await cookies();
+    jar.set("import_token_flash", plaintext, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/settings",
+      maxAge: 60,
+    });
+    revalidatePath("/settings");
+    redirect("/settings");
+  }
+
+  async function revokeImportTokenAction() {
+    "use server";
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.id !== userId) return;
+    await revokeImportToken(userId);
+    const jar = await cookies();
+    jar.delete({ name: "import_token_flash", path: "/settings" });
     revalidatePath("/settings");
     redirect("/settings");
   }
@@ -221,6 +254,35 @@ export default async function SettingsPage({
             {personaTokenSet ? t("regenerateToken") : t("generateToken")}
           </SubmitButton>
         </form>
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
+        <h2 className="font-medium">{t("importTokenSection")}</h2>
+        <p className="text-sm text-neutral-500">{t("importTokenDescription")}</p>
+        {importToken ? (
+          <div className="space-y-1 rounded-md bg-amber-50 px-3 py-2 dark:bg-amber-950/40">
+            <p className="text-sm text-amber-800 dark:text-amber-200">{t("importTokenOnce")}</p>
+            <code className="block break-all rounded bg-white px-2 py-1 text-xs dark:bg-neutral-900">{importToken}</code>
+          </div>
+        ) : (
+          <p className="text-sm text-neutral-500">
+            {importTokenSet ? t("importTokenSet") : t("importTokenNone")}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <form action={generateImportTokenAction}>
+            <SubmitButton className={btnCls} pendingText={t("generating")}>
+              {importTokenSet ? t("regenerateImportToken") : t("generateImportToken")}
+            </SubmitButton>
+          </form>
+          {importTokenSet ? (
+            <form action={revokeImportTokenAction}>
+              <SubmitButton className={btnCls} pendingText={t("revoking")}>
+                {t("revokeImportToken")}
+              </SubmitButton>
+            </form>
+          ) : null}
+        </div>
       </section>
 
       {isOwner ? (

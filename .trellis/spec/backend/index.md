@@ -20,6 +20,7 @@ This directory contains guidelines for backend development. Fill in each file wi
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | To fill |
 | [Chat Relationship Context](./chat-relationship-context.md) | Import partner identity, relationship assignments, and evidence synchronization | Documented |
+| [Agent Material Import](./agent-import.md) | Write-token isolation, bulk ingestion, provenance, and JSONL CLI contracts | Documented |
 
 ---
 

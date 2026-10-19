@@ -27,6 +27,9 @@ model User {
   // SHA-256 (hex) of the user's per-user persona API token (GitHub #13). Null
   // until the user generates one; the plaintext token is shown once and never stored.
   personaTokenHash String?
+  // SHA-256 (hex) of the write-scoped import token (GitHub #38). Separate from the
+  // read-only persona token; null until generated, revocable by setting back to null.
+  importTokenHash String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { safeHttpUrl } from "@/lib/import/source-metadata";
 
 type MaterialRow = {
   id: string;
@@ -11,6 +12,7 @@ type MaterialRow = {
   preview: string;
   evidenceCount: number;
   contextIds: string[];
+  sourceMetadata: Record<string, unknown>;
 };
 
 type RelationshipOption = { id: string; name: string };
@@ -155,6 +157,28 @@ export function MaterialsList({
                 </span>
               </div>
               <p className="break-words text-neutral-500">{m.preview}</p>
+              {Object.keys(m.sourceMetadata).length > 0 ? (
+                <details className="text-xs text-neutral-500">
+                  <summary className="cursor-pointer">{t("sourceMetadataLabel")}</summary>
+                  {[m.sourceMetadata.url, m.sourceMetadata.sourceUrl].map((raw, i) => {
+                    const href = safeHttpUrl(raw);
+                    return href ? (
+                      <a
+                        key={i}
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="block break-all text-blue-600 underline dark:text-blue-400"
+                      >
+                        {href}
+                      </a>
+                    ) : null;
+                  })}
+                  <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-words rounded bg-neutral-50 p-2 dark:bg-neutral-900">
+                    {JSON.stringify(m.sourceMetadata, null, 2)}
+                  </pre>
+                </details>
+              ) : null}
               <div className="flex flex-wrap items-center gap-2">
                 {relationships.length > 0 ? (
                   <select

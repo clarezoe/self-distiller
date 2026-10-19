@@ -84,6 +84,15 @@
     "regenerateToken": "Regenerate persona token",
     "generating": "Generating…",
     "personaTokenOnce": "Your new persona token (copy it now — it won't be shown again):",
+    "importTokenSection": "Agent import token",
+    "importTokenDescription": "A write-scoped token for agents to push materials to POST /api/materials/import (see scripts/distill-import.mjs). Separate from the persona token. Shown once — revoke it if it leaks.",
+    "importTokenSet": "An import token is set.",
+    "importTokenNone": "No import token yet.",
+    "generateImportToken": "Generate import token",
+    "regenerateImportToken": "Regenerate import token",
+    "revokeImportToken": "Revoke import token",
+    "revoking": "Revoking…",
+    "importTokenOnce": "Your new import token (copy it now — it won't be shown again):",
     "invitesSection": "Invites",
     "invitesDescription": "Invite a new user by email. They can then sign in at /login with a magic link and get their own isolated workspace.",
     "inviteEmailPlaceholder": "Email to invite",
@@ -162,6 +171,7 @@
     "confirmDelete": "Delete this material and the evidence extracted from it? This cannot be undone.",
     "errUpdateFailed": "Update failed",
     "oldImportsNote": "Older imports have no chat-partner information. Set a relationship below, or re-import the Takeout folder (new chunks have different content so they are not deduplicated against old ones; delete the old materials afterwards).",
+    "sourceMetadataLabel": "Source metadata",
     "noRelationshipsHint": "Create a relationship context (Contexts page, or via the Google Chat import) to tag materials."
   },
   "googleChat": {

@@ -36,4 +36,18 @@ ssh feifeiecom 'docker exec -i <pg-container> psql -U distill -d distill_me' < p
 #   INSERT INTO "_prisma_migrations"(id,checksum,finished_at,migration_name,started_at,applied_steps_count)
 #   VALUES (gen_random_uuid()::text,'<sha256 of migration.sql>',now(),'<ts>_<name>',now(),1);
 ```
+
+### Agent import token migration
+
+The agent import API requires the additive migration
+`prisma/migrations/20261019120000_import_token_hash/migration.sql`. It adds the
+nullable `User.importTokenHash` column. Back up the database, apply the migration,
+and record it in `_prisma_migrations` with the SHA-256 checksum of the exact SQL file
+before deploying the new application code. A missing column causes Prisma queries
+that select it to fail; this is not a clean token rejection and can affect Settings
+or authentication queries as well as imports. Verify the column and migration record
+before deployment. The migration stores no plaintext token and does not affect the
+existing persona token column. To revoke an import token, use Settings; revocation
+sets its hash to NULL.
+
 TODO: add a Dokploy pre-deploy command or a migrate-on-start entrypoint so this is automatic.

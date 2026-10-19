@@ -5,7 +5,8 @@ import type { NextAuthConfig } from "next-auth";
 // includes this, and route gating only needs the JWT (no DB access).
 // `/api/persona` is token-gated (PERSONA_API_TOKEN) in its own handler, not
 // session-gated — keep it out of the login redirect so external agents reach it.
-const PUBLIC_PREFIXES = ["/login", "/api/auth", "/api/persona"];
+// `/api/materials/import` is gated by a separate write-scoped import token.
+const PUBLIC_PREFIXES = ["/login", "/api/auth", "/api/persona", "/api/materials/import"];
 
 export const authConfig = {
   trustHost: true,
@@ -16,7 +17,10 @@ export const authConfig = {
     // Route gating for proxy.ts. Return false → redirect to signIn page.
     authorized({ auth, request }) {
       const path = request.nextUrl.pathname;
-      if (PUBLIC_PREFIXES.some((p) => path.startsWith(p))) return true;
+      const isPublicPath = PUBLIC_PREFIXES.some(
+        (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+      );
+      if (isPublicPath) return true;
       return !!auth?.user;
     },
     jwt({ token, user }) {
